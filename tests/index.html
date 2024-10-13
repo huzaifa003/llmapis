@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini API Streaming Test</title>
+  <style>
+    #output {
+      white-space: pre-wrap;
+      background-color: #f4f4f4;
+      padding: 10px;
+      border: 1px solid #ddd;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  </style>
+  <script>
+    async function sendStreamingRequest() {
+      const chatId = 'Nt1sfuFVoKeCj4xrkMu4';  // Example chatId
+
+      // Prepare request payload
+      const payload = {
+        modelName: 'gemini:gemini-1.5-flash-002',
+        message: 'And of Phillipines?'
+      };
+
+      // Token for Authorization
+      const token = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjhkOWJlZmQzZWZmY2JiYzgyYzgzYWQwYzk3MmM4ZWE5NzhmNmYxMzciLCJ0eXAiOiJKV1QifQ.eyJzdWJzY3JpcHRpb25UaWVyIjoiUHJvIiwiaXNzIjoiaHR0cHM6Ly9zZWN1cmV0b2tlbi5nb29nbGUuY29tL2xsbXMtZDZiNWIiLCJhdWQiOiJsbG1zLWQ2YjViIiwiYXV0aF90aW1lIjoxNzI4ODM5Njc1LCJ1c2VyX2lkIjoibWVhUzFGNVR1NGVVcWowQ2o1cElvT1djUUE5MiIsInN1YiI6Im1lYVMxRjVUdTRlVXFqMENqNXBJb09XY1FBOTIiLCJpYXQiOjE3Mjg4Mzk2NzUsImV4cCI6MTcyODg0MzI3NSwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7ImVtYWlsIjpbInVzZXJAZXhhbXBsZS5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.qm7zjlKTbfDPs29p04Rw5QaOVCrX3iXqkRqVOXYtzeYS0qev2LhRnm7bPlNeswZlAK23EUnSj9WGF8zB3CYyh4ZSm0Zh6cN2sdzteICfkfEgebeDdS449cXjKZN1r_yBHSs94tglA_zyvXdra7qNUgjokta-Darj0iVlD__oyb28woW5EPm_P-Ufp4S36MNDszIIVVEih6QXrVbu-F1HnJkJyW_98iKj7tlC2cXIOiYYheweCvw0tokohK_XIzGMU5Fl6Ogvm-RjpRRIp0TyKDqDegb3UBjQhWQmfMzITfqZJCHpDk0GpmssfNeyvgs7PhcHwzWeyXvTI7DjyGLuaA';
+
+      // Clear the output area before starting the request
+      const outputDiv = document.getElementById('output');
+      outputDiv.textContent = '';  // Clear previous content
+
+      try {
+        const response = await fetch(`http://localhost:5000/api/stream/${chatId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.body) {
+          outputDiv.textContent = "Stream not supported by the browser.";
+          console.error("Stream not supported by the browser.");
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        // Function to process streaming response
+        async function processStream({ done, value }) {
+          if (done) {
+            console.log('Stream complete');
+            outputDiv.textContent += '\nStream complete.';
+            return;
+          }
+
+          const chunk = decoder.decode(value, { stream: true });
+          console.log('Received chunk:', chunk);
+
+          // Append chunk to the output area
+          outputDiv.textContent += chunk;
+
+          // Scroll to the bottom as new content arrives
+          outputDiv.scrollTop = outputDiv.scrollHeight;
+
+          // Process the next chunk
+          return reader.read().then(processStream);
+        }
+
+        // Start reading the stream
+        reader.read().then(processStream);
+
+      } catch (error) {
+        console.error('Error:', error);
+        outputDiv.textContent = 'Error occurred while streaming.';
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <h1>Streaming API Test</h1>
+  <button onclick="sendStreamingRequest()">Test Streaming Request</button>
+
+  <h2>Stream Output:</h2>
+  <div id="output"></div> <!-- This is where the streamed data will appear -->
+
+</body>
+</html>
