@@ -19,7 +19,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"testpassword\",\n    \"subscriptionTier\": \"Pro\"\n}"
+					"raw": "{\n    \"email\": \"absssssc@example.com\",\n    \"password\": \"testpassword\",\n    \"subscriptionTier\": \"Pro\"\n}"
 				},
 				"url": {
 					"raw": "http://localhost:5000/auth/register",
@@ -83,6 +83,15 @@
 						"value": "{{apiKey}}"
 					}
 				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\": \"Project Discussion\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
 				"url": {
 					"raw": "http://localhost:5000/api/chat/start",
 					"protocol": "http",
@@ -379,6 +388,32 @@
 				}
 			},
 			"response": []
+		},
+		{
+			"name": "Get All Chats",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/chats",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"chats"
+					]
+				}
+			},
+			"response": []
 		}
 	],
 	"event": [
@@ -411,7 +446,7 @@
 		},
 		{
 			"key": "idToken",
-			"value": "",
+			"value": "Bearer {{idToken}}",
 			"type": "string"
 		},
 		{
