@@ -72,11 +72,12 @@ router.post(
 
       // Get the model instance
       const model = getModelInstance(modelName);
+    //   console.log(model);
 
       let responseText;
       let tokensUsed = 0;
 
-      if (modelName.startsWith('openai')) {
+      if (modelName.startsWith('openai:')) {
         // OpenAI model interaction
         const response = await model.invoke(modelMessages);
 
@@ -88,7 +89,7 @@ router.post(
           modelMessages,
           responseText
         );
-      } else if (modelName.startsWith('gemini')) {
+      } else if (modelName.startsWith('gemini:')) {
         // Gemini model interaction
 
         const geminiModel = getModelInstance(modelName);

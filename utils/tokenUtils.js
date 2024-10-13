@@ -3,11 +3,14 @@ import { encoding_for_model } from "@dqbd/tiktoken";
 
 const calculateTokensUsedLangChain = async (model, messages, response) => {
   const modelName = model.modelName;
+//   console.log(modelName);
   let tokensUsed = 0;
 
-  if (modelName.startsWith('openai')) {
+  if (modelName.includes('gpt')) {
+    let finalName = modelName.replace('openai:', '');
     // OpenAI token calculation using tiktoken
-    const encoding = await encoding_for_model(modelName);
+    // console.log(finalName);
+    const encoding = await encoding_for_model(finalName);
 
     messages.forEach((message) => {
       tokensUsed += encoding.encode(message.content).length + 4;
@@ -16,7 +19,8 @@ const calculateTokensUsedLangChain = async (model, messages, response) => {
     tokensUsed += encoding.encode(response).length;
 
     encoding.free();
-  } else if (modelName.startsWith('gemini')) {
+  } else if (modelName.startsWith('gemini:')) {
+    
     // Token counting for Gemini is handled via usage_metadata in the API response
     // So this function may not need to calculate tokens for Gemini
     // Return 0 or handle accordingly
