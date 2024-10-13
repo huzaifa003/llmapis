@@ -3,3 +3,4 @@ creds.txt
 node_modules
 package-lock.json
 llms_private.json
+.vscode

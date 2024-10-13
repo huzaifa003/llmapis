@@ -20,6 +20,8 @@ export const getModelInstance = (modelName) => {
         cache: true,
       });
     return model
+  } else if (modelName.startsWith('imagegen:')) { // Add this line
+    return null
   } else {
     throw new Error('Model not supported.');
   }

@@ -7,6 +7,7 @@ import { calculateTokensUsedLangChain } from '../utils/tokenUtils.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import apiKeyMiddleware from '../middleware/apiKeyMiddleware.js';
 import { getModelInstance } from '../services/langchainServices.js';
+import { fetchImg, generateImage } from '../services/stableDiffusionService.js';
 const router = express.Router();
 
 
@@ -47,7 +48,7 @@ router.post(
   async (req, res) => {
     const { chatId } = req.params;
     const { modelName, message } = req.body;
-
+    console.log(modelName.startsWith('imagegen:'))
     try {
       const db = admin.firestore();
       const messagesRef = db
@@ -71,13 +72,15 @@ router.post(
       modelMessages.push({ role: 'user', content: message });
 
       // Get the model instance
-      const model = getModelInstance(modelName);
+      
     //   console.log(model);
 
       let responseText;
       let tokensUsed = 0;
 
       if (modelName.startsWith('openai:')) {
+
+        const model = getModelInstance(modelName);
         // OpenAI model interaction
         const response = await model.invoke(modelMessages);
 
@@ -117,7 +120,17 @@ router.post(
 
         console.log('Total Tokens:', tokensUsed);
         console.log('Content:', responseText);
-      } else {
+      } else if (modelName.startsWith('imagegen:')){
+        console.log(modelName)
+        let modelId = modelName.split(":")[1];
+        // console.log(modelId);
+        
+        const response = await generateImage(message,modelId);
+        // console.log(response);
+        
+        responseText = "######REQUEST_ID:" + response.id;
+      }
+        else {
         throw new Error('Model not supported.');
       }
 
@@ -155,6 +168,25 @@ router.post(
   }
 );
 
+
+router.post('/get_images', authMiddleware, async (req, res) => {
+  try {
+    fetchImg(req.body.request_id).then((response) => {
+      res.send(response)
+    }).catch((error) => {
+      console.log(error)
+      res.send(error)
+    })
+
+  }
+  catch (err) {
+    console.log(err);
+    res
+      .status(500)
+      .json({ error: 'Failed to process message.', details: err.message });
+
+  }
+})
 // Get chat history
 router.get('/chat/:chatId', authMiddleware, async (req, res) => {
   const { chatId } = req.params;
