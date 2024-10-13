@@ -8,7 +8,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import apiKeyMiddleware from '../middleware/apiKeyMiddleware.js';
 import { getModelInstance } from '../services/langchainServices.js';
 import { fetchImg, generateImage } from '../services/stableDiffusionService.js';
-import { getModelList } from '../services/modelListServices.js';
 import modelsData from '../data/modelList.js';
 const router = express.Router();
 
