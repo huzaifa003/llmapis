@@ -8,6 +8,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import apiKeyMiddleware from '../middleware/apiKeyMiddleware.js';
 import { getModelInstance } from '../services/langchainServices.js';
 import { fetchImg, generateImage } from '../services/stableDiffusionService.js';
+import { getModelList } from '../services/modelListServices.js';
+import modelsData from '../data/modelList.js';
 const router = express.Router();
 
 // Start a new chat session
@@ -381,6 +383,15 @@ router.get('/chats', authMiddleware, async (req, res) => {
 
 
 
-
+router.get('/get-models', async (req, res) => {
+  try {
+    
+    res.json(modelsData);
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: 'Failed to retrieve model list.', details: err.message });
+  }
+});
 
 export default router;
