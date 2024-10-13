@@ -104,22 +104,19 @@ router.post(
         // Gemini model interaction
 
         const geminiModel = getModelInstance(modelName);
+        console.log(geminiModel);
         // Start a chat session
-        const chat = geminiModel.startChat({
-          history: modelMessages.map((msg) => ({
-            role: msg.role,
-            parts: msg.content,
-          })),
-        });
+        const response = await geminiModel.invoke(modelMessages);
 
+        const jsonResGemini = response.toJSON();
         // Send the message and get the response
-        const response = await chat.sendMessage(message);
 
         // Extract the response text
-        responseText = response.candidates[0].content;
+        tokensUsed = jsonResGemini.kwargs.usage_metadata.total_tokens;
+        responseText = jsonResGemini.kwargs.content;
 
-        // Calculate tokens used
-        tokensUsed = response.usage_metadata.total_token_count;
+        console.log('Total Tokens:', tokensUsed);
+        console.log('Content:', responseText);
       } else {
         throw new Error('Model not supported.');
       }

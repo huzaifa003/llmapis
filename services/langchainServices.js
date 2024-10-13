@@ -12,9 +12,10 @@ export const getModelInstance = (modelName) => {
       cache: true,
     });
   } else if (modelName.startsWith('gemini:')) {
+    let finalName= modelName.replace('gemini:', '');
     const model = new ChatGoogleGenerativeAI({
-        model: modelName,
-        apiKey: String(process.env.GOOGLE_API_KEY),
+        model: finalName,
+        apiKey: String(process.env.GEMINI_API_KEY),
         maxOutputTokens: 2048,
         cache: true,
       });
