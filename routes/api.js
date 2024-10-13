@@ -81,14 +81,25 @@ router.post(
         // OpenAI model interaction
         const response = await model.invoke(modelMessages);
 
-        responseText = response.text;
+        // responseText = response.text;
+        // console.log(response.toJSON())
+        const jsonRes = response.toJSON();
+
+        // Extract the response text
+        tokensUsed = jsonRes.kwargs.usage_metadata.total_tokens;
+        responseText = jsonRes.kwargs.content;
+
+        console.log('Total Tokens:', tokensUsed);
+        console.log('Content:', responseText);
+
 
         // Calculate tokens used
-        tokensUsed = await calculateTokensUsedLangChain(
-          model,
-          modelMessages,
-          responseText
-        );
+        // tokensUsed = await calculateTokensUsedLangChain(
+        //   model,
+        //   modelMessages,
+        //   responseText
+        // );
+
       } else if (modelName.startsWith('gemini:')) {
         // Gemini model interaction
 
