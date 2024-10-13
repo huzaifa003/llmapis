@@ -42,6 +42,70 @@ router.post('/chat/start', authMiddleware, apiKeyMiddleware, async (req, res) =>
 });
 
 
+// Delete a chat by chatId
+router.delete('/chat/:chatId', authMiddleware, apiKeyMiddleware, async (req, res) => {
+  try {
+    const { chatId } = req.params;  // Extract chatId from URL params
+
+    // Ensure req.user.uid is valid
+    if (!req.user || !req.user.user_id) {
+      throw new Error('User UID not found');
+    }
+
+    const db = admin.firestore();
+    const chatRef = db
+      .collection('users')
+      .doc(req.user.user_id)
+      .collection('chats')
+      .doc(chatId);
+
+    // Delete the chat document
+    await chatRef.delete();
+
+    res.json({ message: 'Chat deleted successfully', chatId });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete chat.', details: err.message });
+  }
+});
+
+
+// Edit a chat's name by chatId
+router.put('/chat/:chatId', authMiddleware, apiKeyMiddleware, async (req, res) => {
+  try {
+    const { chatId } = req.params;  // Extract chatId from URL params
+    const { name } = req.body;  // Get new name from the request body
+
+    // Ensure req.user.uid is valid
+    if (!req.user || !req.user.user_id) {
+      throw new Error('User UID not found');
+    }
+
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required to update the chat.' });
+    }
+
+    const db = admin.firestore();
+    const chatRef = db
+      .collection('users')
+      .doc(req.user.user_id)
+      .collection('chats')
+      .doc(chatId);
+
+    // Update the chat document's name
+    await chatRef.update({
+      name: name,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),  // Optionally, add updated timestamp
+    });
+
+    res.json({ message: 'Chat updated successfully', chatId, newName: name });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update chat.', details: err.message });
+  }
+});
+
+
+
+
 
 // Send a message in a chat session
 router.post(
