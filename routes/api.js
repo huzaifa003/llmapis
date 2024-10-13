@@ -137,7 +137,8 @@ router.post(
           role: msg.role,
           content: msg.content,
         }))
-        .filter((msg) => msg.content && msg.content.trim() !== ''); // Filter out empty content
+        .filter((msg) => typeof msg.content === 'string' && msg.content.trim() !== '');
+
 
       // Append the new user message (ensure it's non-empty)
       if (message && message.trim() !== '') {
@@ -273,7 +274,8 @@ router.post(
           role: msg.role,
           content: msg.content,
         }))
-        .filter((msg) => msg.content && msg.content.trim() !== ''); // Filter out empty content
+        .filter((msg) => typeof msg.content === 'string' && msg.content.trim() !== '');
+
 
       // Append the new user message (ensure it's non-empty)
       if (message && message.trim() !== '') {
