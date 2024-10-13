@@ -323,7 +323,8 @@ router.post(
         const response = await generateImage(message, modelId);
         // console.log(response);
 
-        responseText = "######REQUEST_ID:" + response.id;
+        // responseText = "######REQUEST_ID:" + response.id;
+        responseText = response.id;
 
         // Increment user's image generation count
         const userRef = db.collection('users').doc(req.user.uid);
