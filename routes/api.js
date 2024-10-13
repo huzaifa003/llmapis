@@ -8,7 +8,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import apiKeyMiddleware from '../middleware/apiKeyMiddleware.js';
 import { getModelInstance } from '../services/langchainServices.js';
 import { fetchImg, generateImage } from '../services/stableDiffusionService.js';
-import modelsData from '../data/modelList.js';
+import {modelsData, imageModelsData} from '../data/modelList.js';
 const router = express.Router();
 
 // Start a new chat session
@@ -384,8 +384,25 @@ router.get('/chats', authMiddleware, async (req, res) => {
 
 router.get('/get-models', async (req, res) => {
   try {
+    if (!req.query.model_type)
+    {
+      return res
+        .status(500)
+        .json({ error: 'Model type not specified.', details: 'model_type' });
+    }
+
+    if (req.query.model_type === 'chat'){
+      return res
+        .status(200)
+        .json(modelsData);
+    }
+
+    if (req.query.model_type === 'image'){
+      return res
+        .status(200)
+        .json(imageModelsData);
+    }
     
-    res.json(modelsData);
   } catch (err) {
     res
       .status(500)

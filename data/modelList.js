@@ -77,4 +77,29 @@ const modelsData = [
     },
   ];
 
-export default modelsData;
+  const imageModelsData = [
+    {
+      label: "ImageGen",
+      options: [
+        {
+          value: "flux",
+          label: "Flux",
+          isPro: true,
+          description: "Most realistic images",
+        },
+        {
+          value: "midjourney",
+          label: "Midjourney",
+          isPro: false,
+          description: "Mid Journey images",
+        },
+        {
+          value: "sdxl",
+          label: "SDXL",
+          isPro: false,
+          description: "SDXL 1.0 is latest AI SOTA text 2 image model which gives ultra realistic images in higher resolutions of 1024",
+        },
+      ],
+    },
+  ]
+export {modelsData, imageModelsData};
