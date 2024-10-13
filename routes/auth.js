@@ -13,6 +13,7 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   const { email, password, subscriptionTier } = req.body;
+  const apiKey = process.env.FIREBASE_API_KEY; // Get this from Firebase project settings
 
   try {
     // Create user with email and password
@@ -33,7 +34,19 @@ router.post('/register', async (req, res) => {
       subscriptionTier: subscriptionTier || 'Free',
     });
 
-    res.status(201).json({ message: 'User registered successfully.' });
+    
+    const response = await axios.post(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+      {
+        email,
+        password,
+        returnSecureToken: true,
+      }
+    );
+
+    const { idToken } = response.data;
+
+    res.status(201).json({ message: 'User registered successfully and logged in.', idToken : idToken });
   } catch (err) {
     res
       .status(400)
@@ -114,5 +127,34 @@ router.post('/generate-api-key', authMiddleware, async (req, res) => {
       res.status(500).json({ error: 'Failed to generate API key.', details: err.message });
     }
   });
+
+
+// Verify Google ID Token Route
+router.post('/verify-token', async (req, res) => {
+  const { idToken } = req.body;  // The ID token sent from the client (Google Sign-In)
+
+  try {
+    // Verify the ID token using Firebase Admin SDK
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const uid = decodedToken.uid;  // Firebase user ID
+    const email = decodedToken.email;
+    
+    // Optionally, you can check for additional claims or roles
+    console.log('User authenticated:', email);
+
+    // Respond with the authenticated user's info
+    res.status(200).json({
+      success: true,
+      uid,
+      email,
+    });
+  } catch (error) {
+    console.error('Error verifying token:', error);
+    res.status(401).json({
+      success: false,
+      message: 'Invalid or expired ID token.',
+    });
+  }
+});
 
 export default router

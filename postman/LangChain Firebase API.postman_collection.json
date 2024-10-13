@@ -1,0 +1,423 @@
+{
+	"info": {
+		"_postman_id": "9c62763b-de14-4e7a-bb85-d4a6e672c200",
+		"name": "LangChain Firebase API",
+		"description": "Postman collection for testing the LangChain Firebase API (OpenAI and Gemini integration with Firebase authentication).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "30217964"
+	},
+	"item": [
+		{
+			"name": "Register User",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"testpassword\",\n    \"subscriptionTier\": \"Pro\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/auth/register",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"auth",
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login User",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"testpassword\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/auth/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Start New Chat Session",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-api-key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/chat/start",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"chat",
+						"start"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Send Message in Chat",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-api-key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"modelName\": \"openai:gpt-3.5-turbo-0125\",\n    \"message\": \"two more?\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/chat/{{chatId}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"chat",
+						"{{chatId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Stream Message in Chat Copy",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-api-key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"modelName\": \"gemini:gemini-1.5-flash-002\",\n    \"message\": \"what is the capital of Pakistan?\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/stream/{{chatId}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"stream",
+						"{{chatId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Send Message in Chat Copy",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-api-key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"modelName\": \"gemini:gemini-1.5-flash-002\",\n    \"message\": \"what is after it?\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/chat/{{chatId}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"chat",
+						"{{chatId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Send Message in Chat Image",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-api-key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"modelName\": \"imagegen:flux\",\n    \"message\": \"A full body shot of young woman in school uniform presenting in black skirt and white button down, with shirt fully untucked in casual look and top button undone, standing in front of the class, smiling,\",\n    \"enchance_prompt\": \"no\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/chat/CQiMLlhuLKR7ZTS5S6q2",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"chat",
+						"CQiMLlhuLKR7ZTS5S6q2"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Image",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-api-key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"request_id\": \"115699352\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/get_images",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"get_images"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Chat History",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					},
+					{
+						"key": "x-api-key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/chat/{{chatId}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"chat",
+						"{{chatId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Subscription Tier",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"subscriptionTier\": \"Premium\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/auth/update-subscription",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"auth",
+						"update-subscription"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Generate API Key",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/auth/generate-api-key",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"auth",
+						"generate-api-key"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "apiKey",
+			"value": "509400726640131a1aa1f6c08b9e4f1105e8dc4d8c6c574dfb6f4285108686a5",
+			"type": "string"
+		},
+		{
+			"key": "idToken",
+			"value": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjhkOWJlZmQzZWZmY2JiYzgyYzgzYWQwYzk3MmM4ZWE5NzhmNmYxMzciLCJ0eXAiOiJKV1QifQ.eyJzdWJzY3JpcHRpb25UaWVyIjoiUHJvIiwiaXNzIjoiaHR0cHM6Ly9zZWN1cmV0b2tlbi5nb29nbGUuY29tL2xsbXMtZDZiNWIiLCJhdWQiOiJsbG1zLWQ2YjViIiwiYXV0aF90aW1lIjoxNzI4ODM5Njc1LCJ1c2VyX2lkIjoibWVhUzFGNVR1NGVVcWowQ2o1cElvT1djUUE5MiIsInN1YiI6Im1lYVMxRjVUdTRlVXFqMENqNXBJb09XY1FBOTIiLCJpYXQiOjE3Mjg4Mzk2NzUsImV4cCI6MTcyODg0MzI3NSwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7ImVtYWlsIjpbInVzZXJAZXhhbXBsZS5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.qm7zjlKTbfDPs29p04Rw5QaOVCrX3iXqkRqVOXYtzeYS0qev2LhRnm7bPlNeswZlAK23EUnSj9WGF8zB3CYyh4ZSm0Zh6cN2sdzteICfkfEgebeDdS449cXjKZN1r_yBHSs94tglA_zyvXdra7qNUgjokta-Darj0iVlD__oyb28woW5EPm_P-Ufp4S36MNDszIIVVEih6QXrVbu-F1HnJkJyW_98iKj7tlC2cXIOiYYheweCvw0tokohK_XIzGMU5Fl6Ogvm-RjpRRIp0TyKDqDegb3UBjQhWQmfMzITfqZJCHpDk0GpmssfNeyvgs7PhcHwzWeyXvTI7DjyGLuaA",
+			"type": "string"
+		},
+		{
+			"key": "chatId",
+			"value": "Nt1sfuFVoKeCj4xrkMu4",
+			"type": "string"
+		}
+	]
+}
