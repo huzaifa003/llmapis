@@ -114,7 +114,8 @@ router.post(
   subscriptionMiddleware,
   async (req, res) => {
     const { chatId } = req.params;
-    const { modelName, message } = req.body;
+    const { modelName, message, kwargs } = req.body;
+    // console.log(kwargs);
 
 
     try {
@@ -152,7 +153,9 @@ router.post(
       let tokensUsed = 0;
 
       if (modelName.startsWith('openai:')) {
-        const model = getModelInstance(modelName);
+        const model = getModelInstance(modelName, kwargs);
+
+        // console.log(model)
         // OpenAI model interaction
         const response = await model.stream(modelMessages);
         responseText = '';
@@ -175,7 +178,9 @@ router.post(
       } else if (modelName.startsWith('gemini:')) {
         responseText = '';
         tokensUsed = 0;
-        const geminiModel = getModelInstance(modelName);
+        // console.log(kwargs)
+        const geminiModel = getModelInstance(modelName, kwargs);
+        // console.log(geminiModel);
 
         const response = await geminiModel.stream(modelMessages);
         for await (const chunk of response) {
