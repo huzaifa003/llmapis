@@ -34,7 +34,7 @@ router.post('/register', async (req, res) => {
       subscriptionTier: subscriptionTier || 'Free',
     });
 
-    
+
     const response = await axios.post(
       `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
       {
@@ -46,7 +46,7 @@ router.post('/register', async (req, res) => {
 
     const { idToken } = response.data;
 
-    res.status(201).json({ message: 'User registered successfully and logged in.', idToken : idToken });
+    res.status(201).json({ message: 'User registered successfully and logged in.', idToken: idToken });
   } catch (err) {
     res
       .status(400)
@@ -106,27 +106,27 @@ router.post('/update-subscription', authMiddleware, async (req, res) => {
 
 // Generate API Key for user
 router.post('/generate-api-key', authMiddleware, async (req, res) => {
-    try {
-      const userId = req.user.uid;
-  
-      // Generate a new API key using a cryptographic function
-      const apiKey = crypto.randomBytes(32).toString('hex');
-  
-      // Save the API key to Firestore under the user's document
-      const db = admin.firestore();
-      const userRef = db.collection('users').doc(userId);
-  
-      // Store the API key in the user's document
-      await userRef.update({ apiKey });
-  
-      res.json({
-        message: 'API key generated successfully.',
-        apiKey,
-      });
-    } catch (err) {
-      res.status(500).json({ error: 'Failed to generate API key.', details: err.message });
-    }
-  });
+  try {
+    const userId = req.user.uid;
+
+    // Generate a new API key using a cryptographic function
+    const apiKey = crypto.randomBytes(32).toString('hex');
+
+    // Save the API key to Firestore under the user's document
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(userId);
+
+    // Store the API key in the user's document
+    await userRef.update({ apiKey });
+
+    res.json({
+      message: 'API key generated successfully.',
+      apiKey,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate API key.', details: err.message });
+  }
+});
 
 
 // Verify Google ID Token Route
@@ -138,7 +138,7 @@ router.post('/verify-token', async (req, res) => {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const uid = decodedToken.uid;  // Firebase user ID
     const email = decodedToken.email;
-    
+
     // Optionally, you can check for additional claims or roles
     console.log('User authenticated:', email);
 
@@ -157,4 +157,140 @@ router.post('/verify-token', async (req, res) => {
   }
 });
 
-export default router
+router.get('/get-api-key', authMiddleware, async (req, res) => {
+  try {
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(req.user.uid);
+    const apiKey = await userRef.get().then((doc) => {
+      if (doc.exists) {
+        res.send(doc.data().apiKey)
+      }
+      else {
+        res.send({ message: 'No API key found for this user.' })
+      }
+    })
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: 'Failed to process message.', details: err.message });
+  }
+})
+
+router.get('/get-subscription', authMiddleware, async (req, res) => {
+  try {
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(req.user.uid);
+    const subscriptionTier = await userRef.get().then((doc) => {
+      if (doc.exists) {
+        res.send(doc.data().subscriptionTier)
+      }
+      else {
+        res.send({ message: 'No subscription tier found for this user.' })
+      }
+    })
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: 'Failed to process message.', details: err.message });
+  }
+})
+
+router.get('/get-user', authMiddleware, async (req, res) => {
+  try {
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(req.user.uid);
+    const user = await userRef.get().then((doc) => {
+      if (doc.exists) {
+        res.send(doc.data())
+      }
+      else {
+        res.send({ message: 'No user found for this user.' })
+      }
+    })
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: 'Failed to process message.', details: err.message });
+  }
+})
+
+router.get('/get-users', authMiddleware, async (req, res) => {
+  try {
+    const db = admin.firestore();
+    const usersRef = db.collection('users');
+    const users = await usersRef.get().then((querySnapshot) => {
+      const users = [];
+      querySnapshot.forEach((doc) => {
+        users.push(doc.data());
+      });
+      res.send(users)
+    })
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: 'Failed to process message.', details: err.message });
+  }
+})
+
+
+router.post('/update-user', authMiddleware, async (req, res) => {
+  try {
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(req.user.uid);
+    const data = req.body;
+    await userRef.update(data);
+    res.json({ message: 'User data updated successfully.' });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: 'Failed to process message.', details: err.message });
+  }
+})
+
+router.post('/update-subscription', authMiddleware, async (req, res) => {
+  try {
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(req.user.uid);
+    const { subscriptionTier } = req.body;
+    await userRef.update({ subscriptionTier });
+    res.json({ message: 'Subscription tier updated successfully.' });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: 'Failed to process message.', details: err.message });
+  }
+})
+
+router.post('/update-api-key', authMiddleware, async (req, res) => {
+  try {
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(req.user.uid);
+    const { apiKey } = req.body;
+    await userRef.update({ apiKey });
+    res.json({ message: 'API key updated successfully.' });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: 'Failed to process message.', details: err.message });
+  }
+})
+
+router.delete('/delete-user', authMiddleware, async (req, res) => {
+  try {
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(req.user.uid);
+    await userRef.delete();
+    res.json({ message: 'User deleted successfully.' });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: 'Failed to process message.', details: err.message });
+  }
+}
+
+);
+
+
+
+
+export default router;
