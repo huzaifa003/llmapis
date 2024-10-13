@@ -11,7 +11,7 @@ export async function generateImage(prompt, modelId = 'sdxlceshi', options = {})
     samples: 1,
     num_inference_steps: 30,
     safety_checker: 'no',
-    enhance_prompt: 'yes',
+    enhance_prompt: 'no',
     guidance_scale: 7.5,
     panorama: 'no',
     self_attention: 'no',

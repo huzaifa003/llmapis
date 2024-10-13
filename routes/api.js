@@ -48,7 +48,8 @@ router.post(
   async (req, res) => {
     const { chatId } = req.params;
     const { modelName, message } = req.body;
-    console.log(modelName.startsWith('imagegen:'))
+    console.log(modelName.startsWith('imagegen:'));
+
     try {
       const db = admin.firestore();
       const messagesRef = db
@@ -71,66 +72,51 @@ router.post(
       // Append the new user message
       modelMessages.push({ role: 'user', content: message });
 
-      // Get the model instance
-      
-    //   console.log(model);
-
       let responseText;
       let tokensUsed = 0;
 
       if (modelName.startsWith('openai:')) {
-
         const model = getModelInstance(modelName);
         // OpenAI model interaction
         const response = await model.invoke(modelMessages);
-
-        // responseText = response.text;
-        // console.log(response.toJSON())
         const jsonRes = response.toJSON();
 
-        // Extract the response text
         tokensUsed = jsonRes.kwargs.usage_metadata.total_tokens;
         responseText = jsonRes.kwargs.content;
 
         console.log('Total Tokens:', tokensUsed);
         console.log('Content:', responseText);
 
-
-        // Calculate tokens used
-        // tokensUsed = await calculateTokensUsedLangChain(
-        //   model,
-        //   modelMessages,
-        //   responseText
-        // );
-
       } else if (modelName.startsWith('gemini:')) {
-        // Gemini model interaction
-
         const geminiModel = getModelInstance(modelName);
         console.log(geminiModel);
-        // Start a chat session
         const response = await geminiModel.invoke(modelMessages);
-
         const jsonResGemini = response.toJSON();
-        // Send the message and get the response
 
-        // Extract the response text
         tokensUsed = jsonResGemini.kwargs.usage_metadata.total_tokens;
         responseText = jsonResGemini.kwargs.content;
 
         console.log('Total Tokens:', tokensUsed);
         console.log('Content:', responseText);
-      } else if (modelName.startsWith('imagegen:')){
-        console.log(modelName)
+
+      } else if (modelName.startsWith('imagegen:')) {
+        console.log(modelName);
         let modelId = modelName.split(":")[1];
-        // console.log(modelId);
+        console.log(modelId);
         
-        const response = await generateImage(message,modelId);
-        // console.log(response);
-        
+        // Call the generateImage function
+        const response = await generateImage(message, modelId);
+        console.log(response);
+
         responseText = "######REQUEST_ID:" + response.id;
-      }
-        else {
+
+        // Increment user's image generation count
+        const userRef = db.collection('users').doc(req.user.uid);
+        await userRef.update({
+          imageGenerationCount: admin.firestore.FieldValue.increment(1),  // Increment image count
+        });
+
+      } else {
         throw new Error('Model not supported.');
       }
 
@@ -161,12 +147,11 @@ router.post(
 
       res.json({ response: responseText });
     } catch (err) {
-      res
-        .status(500)
-        .json({ error: 'Failed to process message.', details: err.message });
+      res.status(500).json({ error: 'Failed to process message.', details: err.message });
     }
   }
 );
+
 
 
 router.post('/get_images', authMiddleware, async (req, res) => {
