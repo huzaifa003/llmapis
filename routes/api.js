@@ -233,12 +233,13 @@ router.post(
 
       // Save user message and assistant response to Firestore
       const batch = db.batch();
-
+      let time = Date.now();
       const userMessageRef = messagesRef.doc();
       batch.set(userMessageRef, {
         role: 'user',
         content: message,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        exact_stamp: time,
       });
 
       const assistantMessageRef = messagesRef.doc();
@@ -246,6 +247,7 @@ router.post(
         role: 'assistant',
         content: responseText,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        exact_stamp: new Date(time.getTime() + 1),
       });
 
       await batch.commit();
