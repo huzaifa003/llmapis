@@ -10,16 +10,15 @@ import { getModelInstance } from '../services/langchainServices.js';
 import { fetchImg, generateImage } from '../services/stableDiffusionService.js';
 const router = express.Router();
 
-
 // Start a new chat session
 router.post('/chat/start', authMiddleware, apiKeyMiddleware, async (req, res) => {
   try {
-    // console.log('User UID:', req.user.user_id);
+    const { name } = req.body;  // Get the chat name from the request body
+
     // Ensure req.user.uid is valid
     if (!req.user || !req.user.user_id) {
       throw new Error('User UID not found');
     }
-
 
     const db = admin.firestore();
     const chatsRef = db
@@ -27,17 +26,20 @@ router.post('/chat/start', authMiddleware, apiKeyMiddleware, async (req, res) =>
       .doc(req.user.user_id)
       .collection('chats');
 
+    // Add the new chat document with a name (if provided) and the creation timestamp
     const chatDoc = await chatsRef.add({
+      name: name || 'Untitled Chat', // Default name if none is provided
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    res.json({ chatId: chatDoc.id });
+    res.json({ chatId: chatDoc.id, name: name || 'Untitled Chat' });
   } catch (err) {
     res
       .status(500)
       .json({ error: 'Failed to start chat session.', details: err.message });
   }
 });
+
 
 
 // Send a message in a chat session
@@ -358,20 +360,25 @@ router.get('/chats', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'No chats found for this user.' });
     }
 
-    // Collecting all chat IDs
-    const chatIds = [];
+    // Collecting chat data (chatId and name)
+    const chats = [];
     chatsSnapshot.forEach(doc => {
-      chatIds.push(doc.id);
+      chats.push({
+        chatId: doc.id,
+        name: doc.data().name || 'Untitled Chat' // Default to 'Untitled Chat' if no name is provided
+      });
     });
 
-    // Return the list of chat IDs
-    res.status(200).json({ chatIds });
+    // Return the list of chat IDs and names
+    res.status(200).json({ chats });
 
   } catch (error) {
-    console.error('Error fetching chatIds:', error);
-    res.status(500).json({ message: 'Error fetching chatIds.', error: error.message });
+    console.error('Error fetching chats:', error);
+    res.status(500).json({ message: 'Error fetching chats.', error: error.message });
   }
 });
+
+
 
 
 
