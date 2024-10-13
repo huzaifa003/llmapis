@@ -342,4 +342,38 @@ router.get('/chat/:chatId', authMiddleware, async (req, res) => {
   }
 });
 
+
+
+// Endpoint to get all chatIds for a user
+router.get('/chats', authMiddleware, async (req, res) => {
+  try {
+    const db = admin.firestore();
+    const userId = req.user.uid; // Assuming the user ID is stored in the decoded token
+
+    // Reference to the user's chat collection
+    const chatsRef = db.collection('users').doc(userId).collection('chats');
+    const chatsSnapshot = await chatsRef.get();
+
+    if (chatsSnapshot.empty) {
+      return res.status(404).json({ message: 'No chats found for this user.' });
+    }
+
+    // Collecting all chat IDs
+    const chatIds = [];
+    chatsSnapshot.forEach(doc => {
+      chatIds.push(doc.id);
+    });
+
+    // Return the list of chat IDs
+    res.status(200).json({ chatIds });
+
+  } catch (error) {
+    console.error('Error fetching chatIds:', error);
+    res.status(500).json({ message: 'Error fetching chatIds.', error: error.message });
+  }
+});
+
+
+
+
 export default router;
