@@ -27,3 +27,30 @@ export const getModelInstance = (modelName) => {
   }
 };
 
+
+export const getStreamingModelInstance = (modelName) => {
+  if (modelName.startsWith('openai:')) {
+    // console.log(typeof(String(process.env.OPENAI_API_KEY)))
+    let finalName = modelName.replace('openai:', '');
+    return new ChatOpenAI({
+      modelName: finalName,
+      openAIApiKey: String(process.env.OPENAI_API_KEY),
+      cache: true,
+      streaming: true,
+    });
+  } else if (modelName.startsWith('gemini:')) {
+    let finalName= modelName.replace('gemini:', '');
+    const model = new ChatGoogleGenerativeAI({
+        model: finalName,
+        apiKey: String(process.env.GEMINI_API_KEY),
+        maxOutputTokens: 2048,
+        cache: true,
+        streaming: true,
+      });
+    return model
+  } else if (modelName.startsWith('imagegen:')) { // Add this line
+    return null
+  } else {
+    throw new Error('Model not supported.');
+  }
+}
