@@ -1,6 +1,5 @@
 // utils/tokenUtils.js
-const { encoding_for_model } = require('@dqbd/tiktoken');
-// const { GeminiModel } = require('@google-ai/gemini'); // Not needed here
+import { encoding_for_model } from "@dqbd/tiktoken";
 
 const calculateTokensUsedLangChain = async (model, messages, response) => {
   const modelName = model.modelName;
@@ -29,4 +28,4 @@ const calculateTokensUsedLangChain = async (model, messages, response) => {
   return tokensUsed;
 };
 
-module.exports = { calculateTokensUsedLangChain };
+export { calculateTokensUsedLangChain };

@@ -1,19 +1,21 @@
 // services/langchainService.js
-const { OpenAI } = require('langchain/llms/openai');
-const { GeminiModel } = require('@google-ai/gemini'); // Hypothetical import
+import { OpenAI } from '@langchain/openai';
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 
-const getModelInstance = (modelName) => {
+export const getModelInstance = (modelName) => {
   if (modelName.startsWith('openai')) {
     return new OpenAI({
       modelName,
       openAIApiKey: process.env.OPENAI_API_KEY,
     });
   } else if (modelName.startsWith('gemini')) {
-    // Return a placeholder as we handle Gemini models differently
-    return { modelName };
+    const model = new ChatGoogleGenerativeAI({
+        model: modelName,
+        maxOutputTokens: 2048,
+      });
+    return model
   } else {
     throw new Error('Model not supported.');
   }
 };
 
-module.exports = { getModelInstance };

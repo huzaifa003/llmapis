@@ -1,5 +1,5 @@
 // middleware/authMiddleware.js
-const admin = require('firebase-admin');
+import admin from 'firebase-admin';
 
 const authMiddleware = async (req, res, next) => {
   const idToken = req.header('Authorization')?.replace('Bearer ', '');
@@ -16,4 +16,5 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
-module.exports = authMiddleware;
+
+export default authMiddleware

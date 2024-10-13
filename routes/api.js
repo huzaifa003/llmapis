@@ -1,20 +1,29 @@
 // routes/api.js
-const express = require('express');
+import express from 'express';
+import admin from 'firebase-admin';
+import authMiddleware from '../middleware/authMiddleware.js';
+import subscriptionMiddleware from '../middleware/subscriptionMiddleware.js';
+import { calculateTokensUsedLangChain } from '../utils/tokenUtils.js';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import apiKeyMiddleware from '../middleware/apiKeyMiddleware.js';
+import { getModelInstance } from '../services/langchainServices.js';
 const router = express.Router();
-const admin = require('firebase-admin');
-const authMiddleware = require('../middleware/authMiddleware');
-const subscriptionMiddleware = require('../middleware/subscriptionMiddleware');
-const { getModelInstance } = require('../services/langchainService');
-const { calculateTokensUsedLangChain } = require('../utils/tokenUtils');
-const { GeminiModel } = require('@google-ai/gemini'); // Hypothetical import
+
 
 // Start a new chat session
-router.post('/chat/start', authMiddleware, async (req, res) => {
+router.post('/chat/start', authMiddleware, apiKeyMiddleware, async (req, res) => {
   try {
+    // console.log('User UID:', req.user.user_id);
+    // Ensure req.user.uid is valid
+    if (!req.user || !req.user.user_id) {
+      throw new Error('User UID not found');
+    }
+
+    
     const db = admin.firestore();
     const chatsRef = db
       .collection('users')
-      .doc(req.user.uid)
+      .doc(req.user.user_id)
       .collection('chats');
 
     const chatDoc = await chatsRef.add({
@@ -28,6 +37,7 @@ router.post('/chat/start', authMiddleware, async (req, res) => {
       .json({ error: 'Failed to start chat session.', details: err.message });
   }
 });
+
 
 // Send a message in a chat session
 router.post(
@@ -68,7 +78,7 @@ router.post(
 
       if (modelName.startsWith('openai')) {
         // OpenAI model interaction
-        const response = await model.call(modelMessages);
+        const response = await model.invoke(modelMessages);
 
         responseText = response.text;
 
@@ -81,12 +91,7 @@ router.post(
       } else if (modelName.startsWith('gemini')) {
         // Gemini model interaction
 
-        // Initialize the Gemini model
-        const geminiModel = new GeminiModel({
-          model: modelName,
-          apiKey: process.env.GEMINI_API_KEY,
-        });
-
+        const geminiModel = getModelInstance(modelName);
         // Start a chat session
         const chat = geminiModel.startChat({
           history: modelMessages.map((msg) => ({
@@ -169,4 +174,4 @@ router.get('/chat/:chatId', authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

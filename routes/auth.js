@@ -1,9 +1,14 @@
 // routes/auth.js
-const express = require('express');
+import express from 'express';
+import admin from 'firebase-admin';
+import axios from 'axios';
+import crypto from 'crypto';  // To generate the API key
+import apiKeyMiddleware from '../middleware/apiKeyMiddleware.js';
+import authMiddleware from '../middleware/authMiddleware.js';
 const router = express.Router();
-const admin = require('firebase-admin');
-const axios = require('axios');
-const authMiddleware = require('../middleware/authMiddleware');
+
+
+
 
 // Register
 router.post('/register', async (req, res) => {
@@ -86,4 +91,28 @@ router.post('/update-subscription', authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router;
+// Generate API Key for user
+router.post('/generate-api-key', authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user.uid;
+  
+      // Generate a new API key using a cryptographic function
+      const apiKey = crypto.randomBytes(32).toString('hex');
+  
+      // Save the API key to Firestore under the user's document
+      const db = admin.firestore();
+      const userRef = db.collection('users').doc(userId);
+  
+      // Store the API key in the user's document
+      await userRef.update({ apiKey });
+  
+      res.json({
+        message: 'API key generated successfully.',
+        apiKey,
+      });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to generate API key.', details: err.message });
+    }
+  });
+
+export default router

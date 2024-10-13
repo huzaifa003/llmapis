@@ -1,17 +1,19 @@
-// app.js
-const express = require('express');
-const admin = require('firebase-admin');
-require('dotenv').config();
+import express from 'express';
+import admin from 'firebase-admin';
+import dotenv from 'dotenv';
+import authRoutes from './routes/auth.js';  // .js extension is required
+import apiRoutes from './routes/api.js';
+import fs from 'fs';  // Use fs to read the JSON file
 
-const authRoutes = require('./routes/auth');
-const apiRoutes = require('./routes/api');
 
+dotenv.config();
 const app = express();
+const serviceAccount = JSON.parse(fs.readFileSync('./llms_private.json', 'utf8'));
 
 admin.initializeApp({
-  credential: admin.credential.cert(require('./serviceAccountKey.json')),
-});
-
+    credential: admin.credential.cert(serviceAccount),
+  });
+  
 app.use(express.json());
 
 app.use('/auth', authRoutes);

@@ -1,5 +1,5 @@
 // middleware/subscriptionMiddleware.js
-const admin = require('firebase-admin');
+import admin from 'firebase-admin';
 
 const subscriptionLimits = {
   Free: 1000,
@@ -37,4 +37,4 @@ const subscriptionMiddleware = async (req, res, next) => {
   }
 };
 
-module.exports = subscriptionMiddleware;
+export default subscriptionMiddleware;
