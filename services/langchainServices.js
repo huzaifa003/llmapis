@@ -6,7 +6,9 @@ export const getModelInstance = (modelName, kwargs) => {
   if (modelName.startsWith('openai:')) {
     // console.log(typeof(String(process.env.OPENAI_API_KEY)))
     let finalName = modelName.replace('openai:', '');
-    kwargs['maxTokens'] = kwargs['maxOutputTokens'] || 2048;
+    kwargs = kwargs || {}; // Ensure kwargs is initialized to an empty object if it's undefined
+    kwargs['maxTokens'] = kwargs['maxOutputTokens'] || 2048;  // Default to 2048 if maxOutputTokens isn't provided
+
     return new ChatOpenAI({
       modelName: finalName,
       openAIApiKey: String(process.env.OPENAI_API_KEY),
