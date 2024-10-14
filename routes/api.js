@@ -115,7 +115,7 @@ router.post(
   async (req, res) => {
     const { chatId } = req.params;
     const { modelName, message, kwargs } = req.body;
-    // console.log(kwargs);
+     console.log(kwargs);
 
 
     try {

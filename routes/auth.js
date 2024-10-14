@@ -81,6 +81,26 @@ router.post('/login', async (req, res) => {
   }
 });
 
+
+router.post('/validate-token', async (req, res) => {
+  const idToken = req.header('Authorization')?.replace('Bearer ', '');
+
+  if (!idToken) {
+    return res.status(401).json({ error: 'Access denied. No token provided.' });
+  }
+
+  try {
+    // Verify the token using Firebase Admin SDK
+    const decodedToken = await admin.auth().verifyIdToken(idToken, true); // 'true' to check for revocation
+    res.status(200).json({ message: 'Token is valid.', uid: decodedToken.uid });
+  } catch (err) {
+    if (err.code === 'auth/id-token-expired') {
+      return res.status(403).json({ error: 'Token expired.' });
+    }
+    res.status(400).json({ error: 'Invalid token.', details: err.message });
+  }
+});
+
 // Update Subscription
 router.post('/update-subscription', authMiddleware, async (req, res) => {
   const { subscriptionTier } = req.body;
