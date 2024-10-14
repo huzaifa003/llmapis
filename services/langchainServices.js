@@ -1,7 +1,7 @@
 // services/langchainService.js
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-
+import admin from 'firebase-admin';
 export const getModelInstance = (modelName, kwargs) => {
   if (modelName.startsWith('openai:')) {
     // console.log(typeof(String(process.env.OPENAI_API_KEY)))
@@ -57,5 +57,25 @@ export const getStreamingModelInstance = (modelName) => {
     return null
   } else {
     throw new Error('Model not supported.');
+  }
+}
+
+
+// Function to increment nanoseconds
+export function incrementTimestamp(timestamp, nanosecondsToAdd) {
+  try {
+    let newNanoseconds = timestamp.nanoseconds + nanosecondsToAdd;
+    let newSeconds = timestamp.seconds;
+
+    // If nanoseconds overflow, adjust seconds and nanoseconds
+    if (newNanoseconds >= 1e9) {
+      newSeconds += Math.floor(newNanoseconds / 1e9);
+      newNanoseconds = newNanoseconds % 1e9;
+    }
+
+    return new admin.firestore.Timestamp(newSeconds, newNanoseconds);
+  }
+  catch(err) {
+    console.log(err);
   }
 }

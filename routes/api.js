@@ -6,7 +6,7 @@ import subscriptionMiddleware from '../middleware/subscriptionMiddleware.js';
 import { calculateTokensUsedLangChain } from '../utils/tokenUtils.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import apiKeyMiddleware from '../middleware/apiKeyMiddleware.js';
-import { getModelInstance } from '../services/langchainServices.js';
+import { getModelInstance, incrementTimestamp } from '../services/langchainServices.js';
 import { fetchImg, generateImage } from '../services/stableDiffusionService.js';
 import {modelsData, imageModelsData} from '../data/modelList.js';
 const router = express.Router();
@@ -114,9 +114,12 @@ router.post(
   subscriptionMiddleware,
   async (req, res) => {
     const { chatId } = req.params;
-    const { modelName, message, kwargs } = req.body;
-     console.log(kwargs);
+    let { modelName, message, kwargs } = req.body;
 
+    if (!kwargs) {
+      kwargs = {};
+    }
+    console.log(kwargs);
 
     try {
       const db = admin.firestore();
@@ -139,28 +142,28 @@ router.post(
         }))
         .filter((msg) => typeof msg.content === 'string' && msg.content.trim() !== '');
 
-
       // Append the new user message (ensure it's non-empty)
       if (message && message.trim() !== '') {
         modelMessages.push({ role: 'user', content: message });
       }
 
-      // Ensure all parts are non-empty before sending to Gemini
+      // Ensure all parts are non-empty before sending to the model
       if (modelMessages.length === 0) {
         throw new Error('No valid content to process.');
       }
 
-      let responseText;
+      let responseText = '';
       let tokensUsed = 0;
+
+      // Set headers before starting to stream
+      res.status(200);
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8'); // or appropriate content type
 
       if (modelName.startsWith('openai:')) {
         const model = getModelInstance(modelName, kwargs);
 
-        // console.log(model)
         // OpenAI model interaction
         const response = await model.stream(modelMessages);
-        responseText = '';
-        tokensUsed = 0;
         for await (const chunk of response) {
           let chunkJson = chunk.toJSON();
           if (chunkJson.kwargs != undefined) {
@@ -172,78 +175,73 @@ router.post(
           }
         }
 
-
+        res.end();
         console.log('Total Tokens:', tokensUsed);
         console.log('Content:', responseText);
-
       } else if (modelName.startsWith('gemini:')) {
-        responseText = '';
-        tokensUsed = 0;
-        // console.log(kwargs)
         const geminiModel = getModelInstance(modelName, kwargs);
-        // console.log(geminiModel);
 
         const response = await geminiModel.stream(modelMessages);
         for await (const chunk of response) {
           let chunkJson = chunk.toJSON();
           if (chunkJson.kwargs != undefined) {
-            if (chunkJson.kwargs.content != undefined && chunkJson.kwargs.content != '' && chunkJson.kwargs.content != 'undefined') {
+            if (
+              chunkJson.kwargs.content != undefined &&
+              chunkJson.kwargs.content != '' &&
+              chunkJson.kwargs.content != 'undefined'
+            ) {
               responseText += chunkJson.kwargs.content;
               res.write(chunkJson.kwargs.content);
             }
             if (chunkJson.kwargs.usage_metadata != undefined) {
               console.log(chunkJson.kwargs.usage_metadata.total_tokens);
-              if (!isNaN(chunkJson.kwargs.usage_metadata.total_tokens) && chunkJson.kwargs.usage_metadata.total_tokens != '' && chunkJson.kwargs.usage_metadata.total_tokens != null) {
-                tokensUsed += chunkJson.kwargs.usage_metadata.total_tokens;  
+              if (
+                !isNaN(chunkJson.kwargs.usage_metadata.total_tokens) &&
+                chunkJson.kwargs.usage_metadata.total_tokens != '' &&
+                chunkJson.kwargs.usage_metadata.total_tokens != null
+              ) {
+                tokensUsed += chunkJson.kwargs.usage_metadata.total_tokens;
               }
-              
             }
           }
         }
 
+        res.end();
+
         console.log('Total Tokens:', tokensUsed);
         console.log('Content:', responseText);
-        
-
       } else {
         throw new Error('Model not supported.');
       }
 
-      // Save user message and assistant response to Firestore
-      const batch = db.batch();
-
+      // Save user message to Firestore
       const userMessageRef = messagesRef.doc();
-      batch.set(userMessageRef, {
+      await userMessageRef.set({
         role: 'user',
         content: message,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
       });
 
+      // Save assistant response to Firestore
       const assistantMessageRef = messagesRef.doc();
-      batch.set(assistantMessageRef, {
+      await assistantMessageRef.set({
         role: 'assistant',
         content: responseText,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
       });
-
-      await batch.commit();
 
       // Update token count
       const userRef = db.collection('users').doc(req.user.uid);
       await userRef.update({
         tokenCount: admin.firestore.FieldValue.increment(tokensUsed),
       });
-
-
-      res.end();
     } catch (err) {
-      res.status(500).json({ error: 'Failed to process message.', details: err.message });
+      res
+        .status(500)
+        .json({ error: 'Failed to process message.', details: err.message });
     }
   }
 );
-
-
-
 
 // Send a message in a chat session
 router.post(
@@ -253,7 +251,6 @@ router.post(
   async (req, res) => {
     const { chatId } = req.params;
     const { modelName, message } = req.body;
-
 
     try {
       const db = admin.firestore();
@@ -276,13 +273,12 @@ router.post(
         }))
         .filter((msg) => typeof msg.content === 'string' && msg.content.trim() !== '');
 
-
       // Append the new user message (ensure it's non-empty)
       if (message && message.trim() !== '') {
         modelMessages.push({ role: 'user', content: message });
       }
 
-      // Ensure all parts are non-empty before sending to Gemini
+      // Ensure all parts are non-empty before sending to the model
       if (modelMessages.length === 0) {
         throw new Error('No valid content to process.');
       }
@@ -292,6 +288,7 @@ router.post(
 
       if (modelName.startsWith('openai:')) {
         const model = getModelInstance(modelName);
+
         // OpenAI model interaction
         const response = await model.invoke(modelMessages);
         const jsonRes = response.toJSON();
@@ -301,10 +298,9 @@ router.post(
 
         console.log('Total Tokens:', tokensUsed);
         console.log('Content:', responseText);
-
       } else if (modelName.startsWith('gemini:')) {
         const geminiModel = getModelInstance(modelName);
-        console.log(modelMessages)
+        console.log(modelMessages);
         const response = await geminiModel.invoke(modelMessages);
         const jsonResGemini = response.toJSON();
 
@@ -313,48 +309,38 @@ router.post(
 
         console.log('Total Tokens:', tokensUsed);
         console.log('Content:', responseText);
-
       } else if (modelName.startsWith('imagegen:')) {
-        // console.log(modelName);
-        let modelId = modelName.split(":")[1];
-        // console.log(modelId);
+        let modelId = modelName.split(':')[1];
 
         // Call the generateImage function
         const response = await generateImage(message, modelId);
-        // console.log(response);
 
-        // responseText = "######REQUEST_ID:" + response.id;
         responseText = response.id;
 
         // Increment user's image generation count
         const userRef = db.collection('users').doc(req.user.uid);
         await userRef.update({
-          imageGenerationCount: admin.firestore.FieldValue.increment(1),  // Increment image count
+          imageGenerationCount: admin.firestore.FieldValue.increment(1), // Increment image count
         });
-
       } else {
         throw new Error('Model not supported.');
       }
 
-      // Save user message and assistant response to Firestore
-      const batch = db.batch();
-      let time = Date.now();
+      // Save user message to Firestore
       const userMessageRef = messagesRef.doc();
-      batch.set(userMessageRef, {
+      await userMessageRef.set({
         role: 'user',
         content: message,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
       });
 
+      // Save assistant response to Firestore
       const assistantMessageRef = messagesRef.doc();
-      batch.set(assistantMessageRef, {
+      await assistantMessageRef.set({
         role: 'assistant',
         content: responseText,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
-
       });
-
-      await batch.commit();
 
       // Update token count
       const userRef = db.collection('users').doc(req.user.uid);
@@ -364,10 +350,13 @@ router.post(
 
       res.json({ response: responseText });
     } catch (err) {
-      res.status(500).json({ error: 'Failed to process message.', details: err.message });
+      res
+        .status(500)
+        .json({ error: 'Failed to process message.', details: err.message });
     }
   }
 );
+
 
 
 
