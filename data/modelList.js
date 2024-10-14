@@ -56,12 +56,6 @@ const modelsData = [
           description: "Audio, images, videos, and text - Fast and versatile performance across a diverse variety of tasks",
         },
         {
-          value: "gemini:gemini-1.5-flash-8b",
-          label: "Gemini 1.5 Flash-8B",
-          isPro: false,
-          description: "Audio, images, videos, and text - High volume and lower intelligence tasks",
-        },
-        {
           value: "gemini:gemini-1.5-pro",
           label: "Gemini 1.5 Pro",
           isPro: true,
