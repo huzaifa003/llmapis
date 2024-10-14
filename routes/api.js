@@ -30,7 +30,7 @@ router.post('/chat/start', authMiddleware, apiKeyMiddleware, async (req, res) =>
     // Add the new chat document with a name (if provided) and the creation timestamp
     const chatDoc = await chatsRef.add({
       name: name || 'Untitled Chat', // Default name if none is provided
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(), // Add the createdAt timestamp
     });
 
     res.json({ chatId: chatDoc.id, name: name || 'Untitled Chat' });
@@ -40,6 +40,7 @@ router.post('/chat/start', authMiddleware, apiKeyMiddleware, async (req, res) =>
       .json({ error: 'Failed to start chat session.', details: err.message });
   }
 });
+
 
 
 // Delete a chat by chatId
@@ -439,6 +440,79 @@ router.get('/chats', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Error fetching chats.', error: error.message });
   }
 });
+
+
+// Endpoint to get all chatIds for a user, grouped by time periods
+router.get('/chats-grouped', authMiddleware, async (req, res) => {
+  try {
+    const db = admin.firestore();
+    const userId = req.user.uid; // Assuming the user ID is stored in the decoded token
+
+    // Reference to the user's chat collection
+    const chatsRef = db.collection('users').doc(userId).collection('chats');
+    const chatsSnapshot = await chatsRef.get();
+
+    if (chatsSnapshot.empty) {
+      return res.status(404).json({ message: 'No chats found for this user.' });
+    }
+
+    // Initialize grouped chats
+    const groupedChats = {
+      today: [],
+      yesterday: [],
+      past7Days: [],
+      past30Days: [],
+      older: [],
+    };
+
+    // Define date boundaries
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(todayStart.getDate() - 1);
+    const past7DaysStart = new Date(todayStart);
+    past7DaysStart.setDate(todayStart.getDate() - 7);
+    const past30DaysStart = new Date(todayStart);
+    past30DaysStart.setDate(todayStart.getDate() - 30);
+
+    // Group chats based on their 'createdAt' timestamp
+    chatsSnapshot.forEach(doc => {
+      const chatData = doc.data();
+      const chatTimestamp = chatData.createdAt ? chatData.createdAt.toDate() : null;
+      const chatInfo = {
+        chatId: doc.id,
+        name: chatData.name || 'Untitled Chat'
+      };
+      console.log(chatData)
+      if (chatTimestamp) {
+        if (chatTimestamp >= todayStart) {
+          groupedChats.today.push(chatInfo);
+        } else if (chatTimestamp >= yesterdayStart && chatTimestamp < todayStart) {
+          groupedChats.yesterday.push(chatInfo);
+        } else if (chatTimestamp >= past7DaysStart && chatTimestamp < yesterdayStart) {
+          groupedChats.past7Days.push(chatInfo);
+        } else if (chatTimestamp >= past30DaysStart && chatTimestamp < past7DaysStart) {
+          groupedChats.past30Days.push(chatInfo);
+        } else {
+          groupedChats.older.push(chatInfo);
+        }
+      } else {
+        // Handle chats without 'createdAt' by placing them in the 'older' group
+        groupedChats.older.push(chatInfo);
+      }
+    });
+
+    // Return the grouped chats
+    res.status(200).json({ chats: groupedChats });
+
+  } catch (error) {
+    console.error('Error fetching chats:', error);
+    res.status(500).json({ message: 'Error fetching chats.', error: error.message });
+  }
+});
+
+
+
 
 
 
