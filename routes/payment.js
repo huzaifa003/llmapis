@@ -17,7 +17,7 @@ const prices = {
 };
 
 
-async function updateUserSubscription(userId, plan, status) {
+async function updateUserSubscription(userId, plan, status, subscriptionId) {
     const db = admin.firestore();
 
     // Mapping price IDs to plan names (Ensure this matches the Stripe Price IDs)
@@ -34,6 +34,7 @@ async function updateUserSubscription(userId, plan, status) {
         subscriptionPlan: newPlan,
         subscriptionTier: newPlan,
         subscriptionStatus: status,
+        subscriptionId: subscriptionId,
     });
 
     console.log(`User ${userId} subscription updated to ${newPlan} with status ${status}`);
@@ -95,6 +96,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             {
                 const subscription = event.data.object;
                 const userId = subscription.metadata.userId;
+                const subscriptionId = subscription.id;
 
                 if (!userId) {
                     throw new Error('userId is missing in the metadata');
@@ -103,7 +105,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                 const plan = subscription.items.data[0].price.id;
                 const subscriptionStatus = subscription.status;
 
-                await updateUserSubscription(userId, plan, subscriptionStatus);
+                await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId);
                 console.log(`User ${userId} subscription updated to plan: ${plan}`);
             }
             break;
@@ -123,7 +125,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                 const plan = subscription.items.data[0].price.id;
                 const subscriptionStatus = subscription.status;
 
-                await updateUserSubscription(userId, plan, subscriptionStatus);
+                await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId);
                 console.log(`User ${userId} subscription updated to plan: ${plan}`);
             }
             break;
@@ -137,7 +139,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                     throw new Error('userId is missing in the metadata');
                 }
 
-                await updateUserSubscription(userId, null, 'canceled');
+                await updateUserSubscription(userId, null, 'canceled', '');
                 console.log(`User ${userId}'s subscription canceled`);
             }
             break;
@@ -158,7 +160,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                 const plan = subscription.items.data[0].price.id;
                 const subscriptionStatus = subscription.status;
 
-                await updateUserSubscription(userId, plan, subscriptionStatus);
+                await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId);
                 console.log(`User ${userId} checkout completed with plan: ${plan}`);
             }
             break;
