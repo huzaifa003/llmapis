@@ -245,8 +245,133 @@ router.post(
 );
 
 // Send a message in a chat session
+// router.post(
+//   '/chat/:chatId',
+//   authMiddleware,
+//   subscriptionMiddleware,
+//   async (req, res) => {
+//     const { chatId } = req.params;
+//     const { modelName, message } = req.body;
+
+
+//     try {
+//       const db = admin.firestore();
+//       const messagesRef = db
+//         .collection('users')
+//         .doc(req.user.uid)
+//         .collection('chats')
+//         .doc(chatId)
+//         .collection('messages');
+
+//       // Retrieve previous messages
+//       const messagesSnapshot = await messagesRef.orderBy('timestamp').get();
+//       const history = messagesSnapshot.docs.map((doc) => doc.data());
+
+//       // Prepare the conversation history
+//       const modelMessages = history
+//         .map((msg) => ({
+//           role: msg.role,
+//           content: msg.content,
+//         }))
+//         .filter((msg) => typeof msg.content === 'string' && msg.content.trim() !== '');
+
+
+//       // Append the new user message (ensure it's non-empty)
+//       if (message && message.trim() !== '') {
+//         modelMessages.push({ role: 'user', content: message });
+//       }
+
+//       // Ensure all parts are non-empty before sending to Gemini
+//       if (modelMessages.length === 0) {
+//         throw new Error('No valid content to process.');
+//       }
+
+//       let responseText;
+//       let tokensUsed = 0;
+
+//       if (modelName.startsWith('openai:')) {
+//         const model = getModelInstance(modelName);
+//         // OpenAI model interaction
+//         const response = await model.invoke(modelMessages);
+//         const jsonRes = response.toJSON();
+
+//         tokensUsed = jsonRes.kwargs.usage_metadata.total_tokens;
+//         responseText = jsonRes.kwargs.content;
+
+//         console.log('Total Tokens:', tokensUsed);
+//         console.log('Content:', responseText);
+
+//       } else if (modelName.startsWith('gemini:')) {
+//         const geminiModel = getModelInstance(modelName);
+//         console.log(modelMessages)
+//         const response = await geminiModel.invoke(modelMessages);
+//         const jsonResGemini = response.toJSON();
+
+//         tokensUsed = jsonResGemini.kwargs.usage_metadata.total_tokens;
+//         responseText = jsonResGemini.kwargs.content;
+
+//         console.log('Total Tokens:', tokensUsed);
+//         console.log('Content:', responseText);
+
+//       } else if (modelName.startsWith('imagegen:')) {
+//         // console.log(modelName);
+//         let modelId = modelName.split(":")[1];
+//         // console.log(modelId);
+
+//         // Call the generateImage function
+//         const response = await generateImage(message, modelId);
+//         // console.log(response);
+
+//         // responseText = "######REQUEST_ID:" + response.id;
+//         responseText = response.id;
+
+//         // Increment user's image generation count
+//         const userRef = db.collection('users').doc(req.user.uid);
+//         await userRef.update({
+//           imageGenerationCount: admin.firestore.FieldValue.increment(1),  // Increment image count
+//         });
+
+//       } else {
+//         throw new Error('Model not supported.');
+//       }
+
+//       // Save user message and assistant response to Firestore
+//       const batch = db.batch();
+//       let time = Date.now();
+//       const userMessageRef = messagesRef.doc();
+//       batch.set(userMessageRef, {
+//         role: 'user',
+//         content: message,
+//         timestamp: admin.firestore.FieldValue.serverTimestamp(),
+//       });
+
+//       const assistantMessageRef = messagesRef.doc();
+//       batch.set(assistantMessageRef, {
+//         role: 'assistant',
+//         content: responseText,
+//         timestamp: admin.firestore.FieldValue.serverTimestamp(),
+
+//       });
+
+//       await batch.commit();
+
+//       // Update token count
+//       const userRef = db.collection('users').doc(req.user.uid);
+//       await userRef.update({
+//         tokenCount: admin.firestore.FieldValue.increment(tokensUsed),
+//       });
+
+//       res.json({ response: responseText });
+//     } catch (err) {
+//       res.status(500).json({ error: 'Failed to process message.', details: err.message });
+//     }
+//   }
+// );
+
+
+
 router.post(
-  '/chat/:chatId',
+  '/image/:chatId',
   authMiddleware,
   subscriptionMiddleware,
   async (req, res) => {
@@ -274,60 +399,44 @@ router.post(
         }))
         .filter((msg) => typeof msg.content === 'string' && msg.content.trim() !== '');
 
+
       // Append the new user message (ensure it's non-empty)
       if (message && message.trim() !== '') {
         modelMessages.push({ role: 'user', content: message });
       }
 
-      // Ensure all parts are non-empty before sending to the model
+      // Ensure all parts are non-empty before sending to Gemini
       if (modelMessages.length === 0) {
         throw new Error('No valid content to process.');
       }
 
       let responseText;
-      let tokensUsed = 0;
 
-      if (modelName.startsWith('openai:')) {
-        const model = getModelInstance(modelName);
+      
+      // console.log(modelName);
+      let modelId = modelName.split(":")[1];
+      // console.log(modelId);
 
-        // OpenAI model interaction
-        const response = await model.invoke(modelMessages);
-        const jsonRes = response.toJSON();
+      // Call the generateImage function
+      const response = await generateImage(message, modelId);
+      // console.log(response);
 
-        tokensUsed = jsonRes.kwargs.usage_metadata.total_tokens;
-        responseText = jsonRes.kwargs.content;
-
-        console.log('Total Tokens:', tokensUsed);
-        console.log('Content:', responseText);
-      } else if (modelName.startsWith('gemini:')) {
-        const geminiModel = getModelInstance(modelName);
-        console.log(modelMessages);
-        const response = await geminiModel.invoke(modelMessages);
-        const jsonResGemini = response.toJSON();
-
-        tokensUsed = jsonResGemini.kwargs.usage_metadata.total_tokens;
-        responseText = jsonResGemini.kwargs.content;
-
-        console.log('Total Tokens:', tokensUsed);
-        console.log('Content:', responseText);
-      } else if (modelName.startsWith('imagegen:')) {
-        let modelId = modelName.split(':')[1];
-
-        // Call the generateImage function
-        const response = await generateImage(message, modelId);
-
+        // responseText = "######REQUEST_ID:" + response.id;
         responseText = response.id;
 
         // Increment user's image generation count
         const userRef = db.collection('users').doc(req.user.uid);
         await userRef.update({
-          imageGenerationCount: admin.firestore.FieldValue.increment(1), // Increment image count
+          imageGenerationCount: admin.firestore.FieldValue.increment(1),  // Increment image count
         });
+
       } else {
         throw new Error('Model not supported.');
       }
 
-      // Save user message to Firestore
+      // Save user message and assistant response to Firestore
+      const batch = db.batch();
+      let time = Date.now();
       const userMessageRef = messagesRef.doc();
       await userMessageRef.set({
         role: 'user',
@@ -343,11 +452,7 @@ router.post(
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      // Update token count
-      const userRef = db.collection('users').doc(req.user.uid);
-      await userRef.update({
-        tokenCount: admin.firestore.FieldValue.increment(tokensUsed),
-      });
+      await batch.commit();
 
       res.json({ response: responseText });
     } catch (err) {
@@ -361,10 +466,12 @@ router.post(
 
 
 
+
 router.post('/get_images', authMiddleware, async (req, res) => {
   try {
     fetchImg(req.body.request_id).then((response) => {
-      res.send(response)
+      let resp = {...response, type: "image"}
+      res.send(resp)
     }).catch((error) => {
       console.log(error)
       res.send(error)
@@ -382,18 +489,18 @@ router.post('/get_images', authMiddleware, async (req, res) => {
 // Get chat history
 router.get('/chat/:chatId', authMiddleware, async (req, res) => {
   const { chatId } = req.params;
-
   try {
+    
     const db = admin.firestore();
     const messagesRef = db
       .collection('users')
-      .doc(req.user.uid)
+      .doc(req.user.user_id)
       .collection('chats')
       .doc(chatId)
       .collection('messages');
 
     const messagesSnapshot = await messagesRef.orderBy('timestamp').get();
-
+    console.log(messagesSnapshot.docs)
     const messages = messagesSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
