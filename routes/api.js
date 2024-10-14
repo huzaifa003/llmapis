@@ -387,28 +387,7 @@ router.post(
         .doc(chatId)
         .collection('messages');
 
-      // Retrieve previous messages
-      const messagesSnapshot = await messagesRef.orderBy('timestamp').get();
-      const history = messagesSnapshot.docs.map((doc) => doc.data());
-
-      // Prepare the conversation history
-      const modelMessages = history
-        .map((msg) => ({
-          role: msg.role,
-          content: msg.content,
-        }))
-        .filter((msg) => typeof msg.content === 'string' && msg.content.trim() !== '');
-
-
-      // Append the new user message (ensure it's non-empty)
-      if (message && message.trim() !== '') {
-        modelMessages.push({ role: 'user', content: message });
-      }
-
-      // Ensure all parts are non-empty before sending to Gemini
-      if (modelMessages.length === 0) {
-        throw new Error('No valid content to process.');
-      }
+  
 
       let responseText;
 
@@ -422,21 +401,16 @@ router.post(
       // console.log(response);
 
         // responseText = "######REQUEST_ID:" + response.id;
-        responseText = response.id;
+      responseText = response.id;
 
-        // Increment user's image generation count
-        const userRef = db.collection('users').doc(req.user.uid);
-        await userRef.update({
-          imageGenerationCount: admin.firestore.FieldValue.increment(1),  // Increment image count
-        });
+      // Increment user's image generation count
+      const userRef = db.collection('users').doc(req.user.uid);
+      await userRef.update({
+        imageGenerationCount: admin.firestore.FieldValue.increment(1),  // Increment image count
+      });
 
-      } else {
-        throw new Error('Model not supported.');
-      }
 
-      // Save user message and assistant response to Firestore
-      const batch = db.batch();
-      let time = Date.now();
+      // Save user message to Firestore
       const userMessageRef = messagesRef.doc();
       await userMessageRef.set({
         role: 'user',
@@ -451,8 +425,7 @@ router.post(
         content: responseText,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
       });
-
-      await batch.commit();
+ 
 
       res.json({ response: responseText });
     } catch (err) {
