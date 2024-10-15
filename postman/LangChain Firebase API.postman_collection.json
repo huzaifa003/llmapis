@@ -19,7 +19,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"email\": \"absssssc@example.com\",\n    \"password\": \"testpassword\",\n    \"subscriptionTier\": \"Pro\"\n}"
+					"raw": "{\n    \"email\": \"stripe_trial_1@example.com\",\n    \"password\": \"testpassword\",\n    \"subscriptionTier\": \"free\"\n}"
 				},
 				"url": {
 					"raw": "http://localhost:5000/auth/register",
@@ -48,7 +48,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"testpassword\"\n}"
+					"raw": "{\n    \"email\": \"stripe_trial_1@example.com\",\n    \"password\": \"testpassword\"\n}"
 				},
 				"url": {
 					"raw": "http://localhost:5000/auth/login",
@@ -85,7 +85,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"name\": \"Project Discussion\"\r\n}",
+					"raw": "{\r\n    \"name\": \"Post Stripe Chat\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -103,6 +103,83 @@
 						"api",
 						"chat",
 						"start"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Chat",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-api-key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/chat/{{chatId}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"chat",
+						"{{chatId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Edit Chat Name",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-api-key",
+						"value": "{{apiKey}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\": \"WW2 Discussion\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/chat/{{chatId}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"chat",
+						"{{chatId}}"
 					]
 				}
 			},
@@ -166,7 +243,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"modelName\": \"gemini:gemini-1.5-flash-002\",\n    \"message\": \"what is the capital of Pakistan?\"\n}"
+					"raw": "{\n    \"modelName\": \"gemini:gemini-1.5-flash-002\",\n    \"message\": \"Now of Huckleberry Finn\"\n}"
 				},
 				"url": {
 					"raw": "http://localhost:5000/api/stream/{{chatId}}",
@@ -204,10 +281,10 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"modelName\": \"gemini:gemini-1.5-flash-002\",\n    \"message\": \"what is after it?\"\n}"
+					"raw": "{\n    \"modelName\": \"gemini:gemini-1.5-flash-002\",\n    \"message\": \"And Melissa Benoist?\"\n}"
 				},
 				"url": {
-					"raw": "http://localhost:5000/api/chat/{{chatId}}",
+					"raw": "http://localhost:5000/api/chat/",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -216,7 +293,7 @@
 					"path": [
 						"api",
 						"chat",
-						"{{chatId}}"
+						""
 					]
 				}
 			},
@@ -242,10 +319,10 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"modelName\": \"imagegen:flux\",\n    \"message\": \"A full body shot of young woman in school uniform presenting in black skirt and white button down, with shirt fully untucked in casual look and top button undone, standing in front of the class, smiling,\",\n    \"enchance_prompt\": \"no\"\n}"
+					"raw": "{\n    \"modelName\": \"imagegen:flux\",\n    \"message\": \"A full body shot of young woman in school uniform presenting in black skirt and white button down shirt fully untucked hanging around her skirt, with shirt fully untucked in casual look and full tie tucked inside her skirt top button undon, standing in front of the class, smiling, hyperrealistic, 4k, shirt tucked out hanging\",\n    \"enchance_prompt\": \"no\"\n}"
 				},
 				"url": {
-					"raw": "http://localhost:5000/api/chat/CQiMLlhuLKR7ZTS5S6q2",
+					"raw": "http://localhost:5000/api/image/{{chatId}}",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -253,8 +330,8 @@
 					"port": "5000",
 					"path": [
 						"api",
-						"chat",
-						"CQiMLlhuLKR7ZTS5S6q2"
+						"image",
+						"{{chatId}}"
 					]
 				}
 			},
@@ -280,7 +357,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"request_id\": \"115699352\"\n}"
+					"raw": "{\n    \"request_id\": \"115871109\"\n}"
 				},
 				"url": {
 					"raw": "http://localhost:5000/api/get_images",
@@ -414,6 +491,175 @@
 				}
 			},
 			"response": []
+		},
+		{
+			"name": "Get All Chats Grouped",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/chats-grouped",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"chats-grouped"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Models",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "",
+						"type": "text",
+						"disabled": true
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/get-models?model_type=chat",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"get-models"
+					],
+					"query": [
+						{
+							"key": "model_type",
+							"value": "chat"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Stripe Test",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"plan\": \"premium\",\r\n  \"userId\": \"NB3uZRygBMhLkxoAU0QQEzLc8lO2\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/payments/create-checkout-session",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"payments",
+						"create-checkout-session"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Stripe Cancel",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"userId\": \"NB3uZRygBMhLkxoAU0QQEzLc8lO2\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/payments/cancel-subscription",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"payments",
+						"cancel-subscription"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get All Users",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/auth/get-users",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"auth",
+						"get-users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get One User",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/auth/get_user_data",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"auth",
+						"get_user_data"
+					]
+				}
+			},
+			"response": []
 		}
 	],
 	"event": [
@@ -441,7 +687,7 @@
 	"variable": [
 		{
 			"key": "apiKey",
-			"value": "509400726640131a1aa1f6c08b9e4f1105e8dc4d8c6c574dfb6f4285108686a5",
+			"value": "{{apiKey}}",
 			"type": "string"
 		},
 		{
@@ -451,7 +697,7 @@
 		},
 		{
 			"key": "chatId",
-			"value": "Nt1sfuFVoKeCj4xrkMu4",
+			"value": "{{chatId}}",
 			"type": "string"
 		}
 	]

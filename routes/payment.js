@@ -3,6 +3,7 @@ import express from 'express';
 import Stripe from 'stripe';
 import dotenv from 'dotenv';
 import admin from 'firebase-admin';
+import { planList } from '../data/planList.js';
 
 
 dotenv.config();
@@ -224,9 +225,10 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 });
 
 
-
-
-
-
+router.get('/get_plans', async (req,res)=>{
+    res.send(
+      planList
+    )
+})
 
 export default router;
