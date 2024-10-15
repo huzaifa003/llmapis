@@ -49,7 +49,7 @@ async function resetUserUsage(userId) {
     const userRef = db.collection('users').doc(userId);
   
     await userRef.update({
-      tokensCount: 0,
+      tokenCount: 0,
       generatedImages: 0,
       // Add any other usage fields you need to reset
     });
