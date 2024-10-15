@@ -44,9 +44,9 @@ router.post('/register', async (req, res) => {
       }
     );
 
-    const { idToken } = response.data;
+    const { idToken, localId } = response.data;
 
-    res.status(201).json({ message: 'User registered successfully and logged in.', idToken: idToken });
+    res.status(201).json({ message: 'User registered successfully and logged in.', idToken: idToken, localId: localId });
   } catch (err) {
     res
       .status(400)
@@ -69,10 +69,9 @@ router.post('/login', async (req, res) => {
         returnSecureToken: true,
       }
     );
+    const { idToken, localId } = response.data;
 
-    const { idToken } = response.data;
-
-    res.json({ idToken });
+    res.json({ idToken, localId });
   } catch (err) {
     res.status(400).json({
       error: 'Login failed.',
