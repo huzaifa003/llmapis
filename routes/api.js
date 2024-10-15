@@ -247,6 +247,7 @@ router.post(
 // Send a message in a chat session
 router.post(
   '/chat/',
+  authMiddleware,
   apiKeyMiddleware,
   subscriptionMiddleware,
   async (req, res) => {
