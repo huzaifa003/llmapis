@@ -310,6 +310,25 @@ router.delete('/delete-user', authMiddleware, async (req, res) => {
 
 );
 
+router.get('/get_user_data', authMiddleware, async (req, res) => {
+  try {
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(req.user.uid);
+    const user = await userRef.get().then((doc) => {
+      if (doc.exists) {
+        res.send(doc.data())
+      }
+      else {
+        res.send({ message: 'No user found for this user.' })
+      }
+    })
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: 'Failed to process message.', details: err.message });
+  }
+})
+
 
 
 

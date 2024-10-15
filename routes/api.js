@@ -246,22 +246,17 @@ router.post(
 
 // Send a message in a chat session
 router.post(
-  '/chat/:chatId',
+  '/chat/',
   authMiddleware,
   subscriptionMiddleware,
   async (req, res) => {
-    const { chatId } = req.params;
+    
     const { modelName, message } = req.body;
 
 
     try {
       const db = admin.firestore();
-      const messagesRef = db
-        .collection('users')
-        .doc(req.user.uid)
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages');
+      
 
       
       
