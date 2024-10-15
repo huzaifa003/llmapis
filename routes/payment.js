@@ -17,16 +17,17 @@ const prices = {
 };
 
 
-async function updateUserSubscription(userId, plan, status, subscriptionId) {
+async function updateUserSubscription(userId, plan, status, subscriptionId, cancelAtPeriodEnd = false, cancelAt = null) {
     const db = admin.firestore();
 
-    // Mapping price IDs to plan names (Ensure this matches the Stripe Price IDs)
+    // Mapping price IDs to plan names
     const planMapping = {
         'price_1Q9wQVBrGkHC1KDCmwgAvpgw': 'pro',
         'price_1Q9wPjBrGkHC1KDC8SUtaut2': 'premium',
     };
 
-    const newPlan = planMapping[plan] || 'free';  // Default to 'basic' if no match
+    const newPlan = planMapping[plan] || 'free'; // Default to 'free' if no match
+    console.log(newPlan)
     const userRef = db.collection('users').doc(userId);
 
     // Update user subscription status and plan in the database
@@ -35,6 +36,8 @@ async function updateUserSubscription(userId, plan, status, subscriptionId) {
         subscriptionTier: newPlan,
         subscriptionStatus: status,
         subscriptionId: subscriptionId,
+        cancelAtPeriodEnd: cancelAtPeriodEnd,
+        cancelAt: cancelAt,
     });
 
     console.log(`User ${userId} subscription updated to ${newPlan} with status ${status}`);
@@ -76,6 +79,47 @@ router.post('/create-checkout-session', async (req, res) => {
     }
 });
 
+// Endpoint to cancel a user's subscription
+router.post('/cancel-subscription', async (req, res) => {
+    const { userId } = req.body;
+
+    try {
+        // Retrieve the user's subscription ID from your database
+        const db = admin.firestore();
+        const userRef = db.collection('users').doc(userId);
+        const userDoc = await userRef.get();
+
+        if (!userDoc.exists) {
+            return res.status(404).send({ error: 'User not found' });
+        }
+
+        const userData = userDoc.data();
+        const subscriptionId = userData.subscriptionId;
+
+        if (!subscriptionId) {
+            return res.status(400).send({ error: 'No subscription found for user' });
+        }
+
+        // Cancel the subscription at the end of the current billing period
+        const deletedSubscription = await stripe.subscriptions.update(subscriptionId, {
+            cancel_at_period_end: true,
+        });
+
+        // Update the user's subscription status in your database
+        await userRef.update({
+            subscriptionStatus: deletedSubscription.status,
+            cancelAtPeriodEnd: deletedSubscription.cancel_at_period_end,
+            cancelAt: deletedSubscription.cancel_at,
+        });
+
+        res.send({ message: 'Subscription cancellation scheduled' });
+    } catch (error) {
+        console.error('Error cancelling subscription:', error);
+        res.status(500).send({ error: 'An error occurred while cancelling the subscription' });
+    }
+});
+
+
 
 // Webhook to handle Stripe events
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -104,8 +148,10 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
                 const plan = subscription.items.data[0].price.id;
                 const subscriptionStatus = subscription.status;
+                const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+                const cancelAt = subscription.cancel_at;
 
-                await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId);
+                await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId,cancelAtPeriodEnd, cancelAt);
                 console.log(`User ${userId} subscription updated to plan: ${plan}`);
             }
             break;
@@ -130,19 +176,21 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             }
             break;
 
-        case 'customer.subscription.deleted':
+            case 'customer.subscription.deleted':
             {
                 const subscription = event.data.object;
                 const userId = subscription.metadata.userId;
-
+                const subscriptionId = subscription.id;
+        
                 if (!userId) {
                     throw new Error('userId is missing in the metadata');
                 }
-
-                await updateUserSubscription(userId, null, 'canceled', '');
+        
+                await updateUserSubscription(userId, null, 'canceled', '', subscription.cancel_at_period_end, subscription.cancel_at);
                 console.log(`User ${userId}'s subscription canceled`);
             }
             break;
+    
 
         case 'checkout.session.completed':
             {
@@ -171,6 +219,10 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
     res.json({ received: true });
 });
+
+
+
+
 
 
 
