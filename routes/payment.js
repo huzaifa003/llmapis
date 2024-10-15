@@ -13,8 +13,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 // Define price IDs for the three subscription variants
 const prices = {
 
-    pro: 'price_1Q9wQVBrGkHC1KDCmwgAvpgw',
-    premium: 'price_1Q9wPjBrGkHC1KDC8SUtaut2',
+    premium: 'price_1Q9wQVBrGkHC1KDCmwgAvpgw',
+    pro: 'price_1Q9wPjBrGkHC1KDC8SUtaut2',
 };
 
 
@@ -23,8 +23,8 @@ async function updateUserSubscription(userId, plan, status, subscriptionId, canc
 
     // Mapping price IDs to plan names
     const planMapping = {
-        'price_1Q9wQVBrGkHC1KDCmwgAvpgw': 'pro',
-        'price_1Q9wPjBrGkHC1KDC8SUtaut2': 'premium',
+        'price_1Q9wQVBrGkHC1KDCmwgAvpgw': 'premium',
+        'price_1Q9wPjBrGkHC1KDC8SUtaut2': 'pro',
     };
 
     const newPlan = planMapping[plan] || 'free'; // Default to 'free' if no match
