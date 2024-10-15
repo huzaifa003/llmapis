@@ -241,7 +241,10 @@ router.get('/get-users', authMiddleware, async (req, res) => {
     const users = await usersRef.get().then((querySnapshot) => {
       const users = [];
       querySnapshot.forEach((doc) => {
-        users.push(doc.data());
+        users.push({
+          id: doc.id,
+          ...doc.data(),
+        });
       });
       res.send(users)
     })
