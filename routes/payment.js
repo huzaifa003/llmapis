@@ -43,6 +43,21 @@ async function updateUserSubscription(userId, plan, status, subscriptionId, canc
     console.log(`User ${userId} subscription updated to ${newPlan} with status ${status}`);
 }
 
+async function resetUserUsage(userId) {
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(userId);
+  
+    await userRef.update({
+      tokensCount: 0,
+      generatedImages: 0,
+      // Add any other usage fields you need to reset
+    });
+  
+    console.log(`User ${userId} usage reset.`);
+  }
+
+  
+
 
 
 
@@ -123,101 +138,89 @@ router.post('/cancel-subscription', async (req, res) => {
 
 // Webhook to handle Stripe events
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-    const sig = req.headers['stripe-signature'];
-    let event;
+  const sig = req.headers['stripe-signature'];
+  let event;
 
-    try {
-        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-    } catch (err) {
-        console.log(`Webhook Error: ${err.message}`);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.log(`Webhook Error: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
 
-    // Handle the event
-    switch (event.type) {
-        case 'customer.subscription.created':
-        case 'customer.subscription.updated':
-            {
-                const subscription = event.data.object;
-                const userId = subscription.metadata.userId;
-                const subscriptionId = subscription.id;
+  // Log received event
+  console.log(`Received event: ${event.type}`);
 
-                if (!userId) {
-                    throw new Error('userId is missing in the metadata');
-                }
+  // Handle the event
+  switch (event.type) {
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated':
+      {
+        const subscription = event.data.object;
+        const userId = subscription.metadata.userId;
+        const subscriptionId = subscription.id;
 
-                const plan = subscription.items.data[0].price.id;
-                const subscriptionStatus = subscription.status;
-                const cancelAtPeriodEnd = subscription.cancel_at_period_end;
-                const cancelAt = subscription.cancel_at;
+        if (!userId) {
+          throw new Error('userId is missing in the metadata');
+        }
 
-                await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId,cancelAtPeriodEnd, cancelAt);
-                console.log(`User ${userId} subscription updated to plan: ${plan}`);
-            }
-            break;
+        const plan = subscription.items.data[0].price.id;
+        const subscriptionStatus = subscription.status;
+        const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+        const cancelAt = subscription.cancel_at;
 
-        case 'invoice.payment_succeeded':
-            {
-                const invoice = event.data.object;
-                const subscriptionId = invoice.subscription;
+        await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId, cancelAtPeriodEnd, cancelAt);
+        console.log(`User ${userId} subscription updated to plan: ${plan}`);
+      }
+      break;
 
-                const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-                const userId = subscription.metadata.userId;
+    case 'invoice.payment_succeeded':
+      {
+        const invoice = event.data.object;
+        const subscriptionId = invoice.subscription;
 
-                if (!userId) {
-                    throw new Error('userId is missing in the metadata');
-                }
+        // Retrieve the subscription object to get the metadata
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const userId = subscription.metadata.userId;
 
-                const plan = subscription.items.data[0].price.id;
-                const subscriptionStatus = subscription.status;
+        if (!userId) {
+          throw new Error('userId is missing in the metadata');
+        }
 
-                await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId);
-                console.log(`User ${userId} subscription updated to plan: ${plan}`);
-            }
-            break;
+        const plan = subscription.items.data[0].price.id;
+        const subscriptionStatus = subscription.status;
 
-            case 'customer.subscription.deleted':
-            {
-                const subscription = event.data.object;
-                const userId = subscription.metadata.userId;
-                const subscriptionId = subscription.id;
-        
-                if (!userId) {
-                    throw new Error('userId is missing in the metadata');
-                }
-        
-                await updateUserSubscription(userId, null, 'canceled', '', subscription.cancel_at_period_end, subscription.cancel_at);
-                console.log(`User ${userId}'s subscription canceled`);
-            }
-            break;
-    
+        // Reset tokens count and generated images
+        await resetUserUsage(userId);
 
-        case 'checkout.session.completed':
-            {
-                const session = event.data.object;
-                const subscriptionId = session.subscription;
+        // Update the user's subscription status and plan
+        await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId);
+        console.log(`User ${userId} subscription renewed. Usage reset.`);
+      }
+      break;
 
-                // Retrieve the subscription to get metadata
-                const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-                const userId = subscription.metadata.userId;
+    case 'customer.subscription.deleted':
+      {
+        const subscription = event.data.object;
+        const userId = subscription.metadata.userId;
+        const subscriptionId = subscription.id;
 
-                if (!userId) {
-                    throw new Error('userId is missing in the metadata');
-                }
+        if (!userId) {
+          throw new Error('userId is missing in the metadata');
+        }
 
-                const plan = subscription.items.data[0].price.id;
-                const subscriptionStatus = subscription.status;
+        await updateUserSubscription(userId, null, 'canceled', '', false, null);
+        console.log(`User ${userId}'s subscription canceled`);
+      }
+      break;
 
-                await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId);
-                console.log(`User ${userId} checkout completed with plan: ${plan}`);
-            }
-            break;
+    // Handle other events as needed
 
-        default:
-            console.log(`Unhandled event type: ${event.type}`);
-    }
+    default:
+      console.log(`Unhandled event type: ${event.type}`);
+  }
 
-    res.json({ received: true });
+  res.json({ received: true });
 });
 
 
