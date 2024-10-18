@@ -37,7 +37,12 @@
             "x-api-key": apiKey
           },
           body: JSON.stringify({
-            message: userMessage  // Send the typed message
+            messages: [
+                        {
+                "role": "user",
+                "content": userMessage
+                }
+            ]  // Send the typed message
           })
         });
 
