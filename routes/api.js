@@ -9,6 +9,8 @@ import apiKeyMiddleware from '../middleware/apiKeyMiddleware.js';
 import { getModelInstance, incrementTimestamp } from '../services/langchainServices.js';
 import { fetchImg, generateImage } from '../services/stableDiffusionService.js';
 import {modelsData, imageModelsData} from '../data/modelList.js';
+import { generateApiKey } from '../services/apiKeyGenerator.js';
+import botApiKeyMiddleware from '../middleware/botApiKeyMiddleware.js';
 const router = express.Router();
 
 // Start a new chat session
@@ -337,6 +339,384 @@ router.post(
     }
   }
 );
+
+
+// routes/api.js
+
+router.post('/bot', authMiddleware, async (req, res) => {
+  try {
+    const { systemContext, modelName, kwargs } = req.body;
+
+    if (!systemContext) {
+      return res.status(400).json({ error: 'System context is required' });
+    }
+
+    const db = admin.firestore();
+    const botsRef = db.collection('bots');
+
+    // Generate a unique API key for the bot
+    const apiKey = generateApiKey();
+
+    // Create the bot document
+    const botDocRef = await botsRef.add({
+      systemContext,
+      apiKey,
+      ownerUserId: req.user.uid,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      modelName: modelName || 'openai:gpt-3.5-turbo', // default model
+      kwargs: kwargs || {}, // optional model parameters
+    });
+
+    res.json({ botId: botDocRef.id, apiKey });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create bot', details: error.message });
+  }
+});
+
+
+router.post('/bot/:botId/message', botApiKeyMiddleware, async (req, res) => {
+  try {
+    const { botId } = req.params;
+    const { message } = req.body;
+
+    if (!message || message.trim() === '') {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    // Ensure the botId from the URL matches the authenticated bot
+    if (botId !== req.bot.botId) {
+      return res.status(403).json({ error: 'Bot ID mismatch' });
+    }
+
+    const db = admin.firestore();
+
+    // Get the bot's system context, modelName, kwargs, and ownerUserId
+    const { systemContext, modelName, kwargs, ownerUserId } = req.bot;
+
+    // Ensure the owner user exists
+    const userRef = db.collection('users').doc(ownerUserId);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      throw new Error('Owner user does not exist');
+    }
+
+    let responseText;
+    let tokensUsed = 0;
+
+    if (modelName.startsWith('openai:') || modelName.startsWith('gemini:')) {
+      // Prepare the messages for the model
+      const modelMessages = [
+        { role: 'system', content: systemContext },
+        { role: 'user', content: message },
+      ];
+
+      // Get the model instance
+      const model = getModelInstance(modelName, kwargs);
+
+      // Generate the response
+      const response = await model.invoke(modelMessages);
+      const jsonResponse = response.toJSON();
+      responseText = jsonResponse.kwargs.content;
+      tokensUsed = jsonResponse.kwargs.usage_metadata.total_tokens;
+
+      // Update usage stats for the bot's owner
+      await userRef.update({
+        tokenCount: admin.firestore.FieldValue.increment(tokensUsed),
+      });
+
+    } else if (modelName.startsWith('imagegen:')) {
+      // Handle image generation
+      const modelId = modelName.split(":")[1];
+
+      // Call the generateImage function
+      const response = await generateImage(message, modelId);
+
+      // The response may contain an ID or URL of the generated image
+      responseText = response.id || response.imageUrl;
+
+      // Update usage stats for the bot's owner
+      await userRef.update({
+        imageGenerationCount: admin.firestore.FieldValue.increment(1),
+      });
+
+    } else {
+      throw new Error('Model not supported.');
+    }
+
+    // Save the message and response to Firestore
+    const messagesRef = db.collection('bots').doc(botId).collection('messages');
+
+    // Save user message
+    await messagesRef.add({
+      role: 'user',
+      content: message,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Save bot response
+    await messagesRef.add({
+      role: 'assistant',
+      content: responseText,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.json({ response: responseText });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to process message', details: error.message });
+  }
+});
+
+
+router.post('/bot/:botId/stream', botApiKeyMiddleware, async (req, res) => {
+  try {
+    const { botId } = req.params;
+    const { message } = req.body;
+
+    if (!message || message.trim() === '') {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    // Ensure the botId from the URL matches the authenticated bot
+    if (botId !== req.bot.botId) {
+      return res.status(403).json({ error: 'Bot ID mismatch' });
+    }
+
+    const db = admin.firestore();
+
+    // Get the bot's system context, modelName, kwargs, and ownerUserId
+    const { systemContext, modelName, kwargs, ownerUserId } = req.bot;
+
+    // Ensure the owner user exists
+    console.log(ownerUserId);
+    const userRef = db.collection('users').doc(ownerUserId);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      throw new Error('Owner user does not exist');
+    }
+
+    let tokensUsed = 0;
+    let responseText = '';
+
+    if (modelName.startsWith('openai:') || modelName.startsWith('gemini:')) {
+      // Prepare the messages for the model
+      const modelMessages = [
+        { role: 'system', content: systemContext },
+        { role: 'user', content: message },
+      ];
+
+      // Get the model instance
+      const model = getModelInstance(modelName, kwargs);
+
+      // Set headers for streaming
+      res.writeHead(200, {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Transfer-Encoding': 'chunked',
+        'Connection': 'keep-alive',
+      });
+
+      if (modelName.startsWith('openai:')) {
+        // OpenAI streaming
+        const response = await model.stream(modelMessages);
+        for await (const chunk of response) {
+          let chunkJson = chunk.toJSON();
+          if (chunkJson.kwargs != undefined) {
+            responseText += chunkJson.kwargs.content;
+            res.write(chunkJson.kwargs.content);
+            if (chunkJson.kwargs.usage_metadata != undefined) {
+              tokensUsed += chunkJson.kwargs.usage_metadata.total_tokens;
+            }
+          }
+        }
+
+        res.end();
+        console.log('Total Tokens:', tokensUsed);
+        console.log('Content:', responseText);
+        
+      } else if (modelName.startsWith('gemini:')) {
+        // Gemini streaming
+        const response = await model.stream(modelMessages);
+        for await (const chunk of response) {
+          let chunkJson = chunk.toJSON();
+          if (chunkJson.kwargs != undefined) {
+            if (
+              chunkJson.kwargs.content != undefined &&
+              chunkJson.kwargs.content != '' &&
+              chunkJson.kwargs.content != 'undefined'
+            ) {
+              responseText += chunkJson.kwargs.content;
+              res.write(chunkJson.kwargs.content);
+            }
+            if (chunkJson.kwargs.usage_metadata != undefined) {
+              console.log(chunkJson.kwargs.usage_metadata.total_tokens);
+              if (
+                !isNaN(chunkJson.kwargs.usage_metadata.total_tokens) &&
+                chunkJson.kwargs.usage_metadata.total_tokens != '' &&
+                chunkJson.kwargs.usage_metadata.total_tokens != null
+              ) {
+                tokensUsed += chunkJson.kwargs.usage_metadata.total_tokens;
+              }
+            }
+          }
+        }
+
+        res.end();
+
+        console.log('Total Tokens:', tokensUsed);
+        console.log('Content:', responseText);
+        
+      }
+
+      // Update usage stats for the bot's owner
+      await userRef.update({
+        tokenCount: admin.firestore.FieldValue.increment(tokensUsed),
+      });
+
+      // Save the message and response to Firestore
+      const messagesRef = db.collection('bots').doc(botId).collection('messages');
+
+      // Save user message
+      await messagesRef.add({
+        role: 'user',
+        content: message,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Save bot response
+      await messagesRef.add({
+        role: 'assistant',
+        content: responseText,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      return;
+
+    } else if (modelName.startsWith('imagegen:')) {
+      // Handle image generation
+      // For image generation, streaming may not be applicable
+      // So we handle it as before
+
+      const modelId = modelName.split(":")[1];
+
+      // Call the generateImage function
+      const response = await generateImage(message, modelId);
+
+      // The response may contain an ID or URL of the generated image
+      const responseText = response.id || response.imageUrl;
+
+      // Update usage stats for the bot's owner
+      await userRef.update({
+        imageGenerationCount: admin.firestore.FieldValue.increment(1),
+      });
+
+      // Save the message and response to Firestore
+      const messagesRef = db.collection('bots').doc(botId).collection('messages');
+
+      // Save user message
+      await messagesRef.add({
+        role: 'user',
+        content: message,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Save bot response
+      await messagesRef.add({
+        role: 'assistant',
+        content: responseText,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      res.json({ response: responseText });
+
+    } else {
+      throw new Error('Model not supported.');
+    }
+
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to process message', details: error.message });
+  }
+});
+
+
+
+router.post('/bot/:botId/image', botApiKeyMiddleware, async (req, res) => {
+  try {
+    const { botId } = req.params;
+    const { message } = req.body;
+
+    if (!message || message.trim() === '') {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    // Ensure the botId from the URL matches the authenticated bot
+    if (botId !== req.bot.botId) {
+      return res.status(403).json({ error: 'Bot ID mismatch' });
+    }
+
+    const db = admin.firestore();
+
+    // Get the bot's system context, modelName, kwargs, and ownerUserId
+    const { systemContext, modelName, kwargs, ownerUserId } = req.bot;
+
+    // Ensure the owner user exists
+    const userRef = db.collection('users').doc(ownerUserId);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      throw new Error('Owner user does not exist');
+    }
+
+    if (modelName.startsWith('imagegen:')) {
+      // Handle image generation
+      // For image generation, streaming may not be applicable
+      // So we handle it as before
+
+      const modelId = modelName.split(":")[1];
+
+      // Call the generateImage function
+      const response = await generateImage(message, modelId);
+      
+      if (response.status === 'error'){
+        throw new Error('SD API Returned an Error Named : ' + response.message);
+      }
+        
+      // The response may contain an ID or URL of the generated image
+      const responseText = response.id || response.imageUrl;
+
+      // Update usage stats for the bot's owner
+      await userRef.update({
+        imageGenerationCount: admin.firestore.FieldValue.increment(1),
+      });
+
+      // Save the message and response to Firestore
+      const messagesRef = db.collection('bots').doc(botId).collection('messages');
+
+      // Save user message
+      await messagesRef.add({
+        role: 'user',
+        content: message,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Save bot response
+      await messagesRef.add({
+        role: 'assistant',
+        content: responseText,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      res.json({ response: responseText });
+
+    } else {
+      throw new Error('Model not supported.');
+    }
+
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to process message', details: error.message });
+  }
+});
+
+
+
+
 
 
 
