@@ -3,131 +3,71 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gemini API Streaming Test</title>
-  <style>
-    #output {
-      white-space: pre-wrap;
-      background-color: #f4f4f4;
-      padding: 10px;
-      border: 1px solid #ddd;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-  </style>
-  <script>
-    async function sendStreamingRequest() {
-      const chatId = 'Nt1sfuFVoKeCj4xrkMu4';  // Example chatId
-
-      // Get the values from input fields
-      const modelName = 'openai:gpt-3.5-turbo-0125';
-      const message = document.getElementById('message').value;
-      const topP = document.getElementById('topP').value || 1.0;
-      const topK = document.getElementById('topK').value || 40;
-      const temperature = document.getElementById('temperature').value || 0.7;
-      const outputLength = document.getElementById('outputLength').value || 2048;
-
-      // Prepare request payload
-      const payload = {
-        modelName,
-        message,
-        kwargs: {
-          topP: parseFloat(topP),
-          topK: parseInt(topK),
-          temperature: parseFloat(temperature),
-          maxOutputTokens: parseInt(outputLength)
-        }
-      };
-
-      // Token for Authorization
-      const token = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjhkOWJlZmQzZWZmY2JiYzgyYzgzYWQwYzk3MmM4ZWE5NzhmNmYxMzciLCJ0eXAiOiJKV1QifQ.eyJzdWJzY3JpcHRpb25UaWVyIjoiUHJvIiwiaXNzIjoiaHR0cHM6Ly9zZWN1cmV0b2tlbi5nb29nbGUuY29tL2xsbXMtZDZiNWIiLCJhdWQiOiJsbG1zLWQ2YjViIiwiYXV0aF90aW1lIjoxNzI4ODU1NzM2LCJ1c2VyX2lkIjoibWVhUzFGNVR1NGVVcWowQ2o1cElvT1djUUE5MiIsInN1YiI6Im1lYVMxRjVUdTRlVXFqMENqNXBJb09XY1FBOTIiLCJpYXQiOjE3Mjg4NTU3MzYsImV4cCI6MTcyODg1OTMzNiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7ImVtYWlsIjpbInVzZXJAZXhhbXBsZS5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.V8WNqtVSIhyfaX1BwE6EKaiqx3uRpI1aaCGmLMstxZoyw_KUruW2PZ6LC2yK-GwPnFchNeT1zzwpFbVF8sNjOnEGXfjCRU6uobLyEb_SLt7zz9tQwd7s52PbOqrYsPX7Cu9t0jZAEcwxqabddTja1pZwOu8ZR4fwYd6bsGOPQYeWh5DbrYNfag2rXwfvMXlmiOgw_nu-YJ3LT96SVFqeUJPXK5ZYtnwxHnMXiFkgDF9OjNwbPGbqrj3gtAAV8kZ-JnbLXPzYHUpwkmM7lGz19up-Ml75wvzTBete7hOqHtIsGRkeqwunGkWXf_cud8cboN3sqI0bwEINHCE_wR1TOA';  // Replace with your valid token
-
-      // Clear the output area before starting the request
-      const outputDiv = document.getElementById('output');
-      outputDiv.textContent = '';  // Clear previous content
-
-      try {
-        const response = await fetch(`http://localhost:5000/api/stream/${chatId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (!response.body) {
-          outputDiv.textContent = "Stream not supported by the browser.";
-          console.error("Stream not supported by the browser.");
-          return;
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        // Function to process streaming response
-        async function processStream({ done, value }) {
-          if (done) {
-            console.log('Stream complete');
-            outputDiv.textContent += '\nStream complete.';
-            return;
-          }
-
-          const chunk = decoder.decode(value, { stream: true });
-          console.log('Received chunk:', chunk);
-
-          // Append chunk to the output area
-          outputDiv.textContent += chunk;
-
-          // Scroll to the bottom as new content arrives
-          outputDiv.scrollTop = outputDiv.scrollHeight;
-
-          // Process the next chunk
-          return reader.read().then(processStream);
-        }
-
-        // Start reading the stream
-        reader.read().then(processStream);
-
-      } catch (error) {
-        console.error('Error:', error);
-        outputDiv.textContent = 'Error occurred while streaming.';
-      }
-    }
-  </script>
+  <title>Stream Message to Bot</title>
 </head>
 <body>
+  <h1>Stream Message to Bot</h1>
+  
+  <!-- Input for typing a message -->
+  <input type="text" id="userMessage" placeholder="Type your message here..." style="width: 300px;">
+  <button id="sendMessageButton">Send Message</button>
+  
+  <!-- To display the streamed response -->
+  <div id="responseContainer"></div> 
 
-  <h1>Streaming API Test with Custom Parameters</h1>
+  <script>
+    document.getElementById("sendMessageButton").addEventListener("click", async function() {
+      const botId = "SotklFzeiTR9yujO3VC7";  // Replace with your botId
+      const apiKey = "b95bde42-edd1-4cdd-9fc5-4806a98e2479";  // Replace with your actual API key
+      const userMessage = document.getElementById("userMessage").value;  // Get the typed message
 
-  <div>
-    <label for="message">Message:</label>
-    <input type="text" id="message" value="What is the capital of France?" required>
-  </div>
+      const responseContainer = document.getElementById('responseContainer');
+      responseContainer.innerHTML = '';  // Clear previous responses
 
-  <div>
-    <label for="topP">TopP:</label>
-    <input type="number" id="topP" value="1.0" step="0.1" min="0.1" max="1.0">
-  </div>
+      if (!userMessage) {
+        responseContainer.innerHTML = "Please enter a message!";
+        return;
+      }
 
-  <div>
-    <label for="topK">TopK:</label>
-    <input type="number" id="topK" value="40" step="1" min="1">
-  </div>
+      try {
+        const response = await fetch(`http://localhost:5000/api/bot/${botId}/stream`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey
+          },
+          body: JSON.stringify({
+            message: userMessage  // Send the typed message
+          })
+        });
 
-  <div>
-    <label for="temperature">Temperature:</label>
-    <input type="number" id="temperature" value="0.7" step="0.1" min="0.1" max="1.0">
-  </div>
+        if (!response.ok) {
+          throw new Error(`Error: ${response.statusText}`);
+        }
 
-  <div>
-    <label for="outputLength">Output Length:</label>
-    <input type="number" id="outputLength" value="2048" step="100" min="100">
-  </div>
+        // Use a TextDecoder to handle streamed response as it comes
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
 
-  <button onclick="sendStreamingRequest()">Test Streaming Request</button>
+        while (true) {
+          const { done, value } = await reader.read();
 
-  <h2>Stream Output:</h2>
-  <div id="output"></div> <!-- This is where the streamed data will appear -->
+          if (done) {
+            console.log("Stream complete");
+            break;
+          }
 
+          // Decode and append the streamed chunk to the response container
+          const chunk = decoder.decode(value, { stream: true });
+          responseContainer.innerHTML += chunk;  // Append to HTML element
+          console.log(chunk);  // Optionally log the streamed chunk
+        }
+
+      } catch (error) {
+        console.error("Error sending message to bot:", error);
+        responseContainer.innerHTML = 'Error: ' + error.message;
+      }
+    });
+  </script>
 </body>
 </html>

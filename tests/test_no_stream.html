@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini API Streaming Test</title>
+  <style>
+    #output {
+      white-space: pre-wrap;
+      background-color: #f4f4f4;
+      padding: 10px;
+      border: 1px solid #ddd;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  </style>
+  <script>
+    async function sendStreamingRequest() {
+      const chatId = 'Nt1sfuFVoKeCj4xrkMu4';  // Example chatId
+
+      // Get the values from input fields
+      const modelName = 'openai:gpt-3.5-turbo-0125';
+      const message = document.getElementById('message').value;
+      const topP = document.getElementById('topP').value || 1.0;
+      const topK = document.getElementById('topK').value || 40;
+      const temperature = document.getElementById('temperature').value || 0.7;
+      const outputLength = document.getElementById('outputLength').value || 2048;
+
+      // Prepare request payload
+      const payload = {
+        modelName,
+        message,
+        kwargs: {
+          topP: parseFloat(topP),
+          topK: parseInt(topK),
+          temperature: parseFloat(temperature),
+          maxOutputTokens: parseInt(outputLength)
+        }
+      };
+
+      // Token for Authorization
+      const token = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjhkOWJlZmQzZWZmY2JiYzgyYzgzYWQwYzk3MmM4ZWE5NzhmNmYxMzciLCJ0eXAiOiJKV1QifQ.eyJzdWJzY3JpcHRpb25UaWVyIjoiUHJvIiwiaXNzIjoiaHR0cHM6Ly9zZWN1cmV0b2tlbi5nb29nbGUuY29tL2xsbXMtZDZiNWIiLCJhdWQiOiJsbG1zLWQ2YjViIiwiYXV0aF90aW1lIjoxNzI4ODU1NzM2LCJ1c2VyX2lkIjoibWVhUzFGNVR1NGVVcWowQ2o1cElvT1djUUE5MiIsInN1YiI6Im1lYVMxRjVUdTRlVXFqMENqNXBJb09XY1FBOTIiLCJpYXQiOjE3Mjg4NTU3MzYsImV4cCI6MTcyODg1OTMzNiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7ImVtYWlsIjpbInVzZXJAZXhhbXBsZS5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.V8WNqtVSIhyfaX1BwE6EKaiqx3uRpI1aaCGmLMstxZoyw_KUruW2PZ6LC2yK-GwPnFchNeT1zzwpFbVF8sNjOnEGXfjCRU6uobLyEb_SLt7zz9tQwd7s52PbOqrYsPX7Cu9t0jZAEcwxqabddTja1pZwOu8ZR4fwYd6bsGOPQYeWh5DbrYNfag2rXwfvMXlmiOgw_nu-YJ3LT96SVFqeUJPXK5ZYtnwxHnMXiFkgDF9OjNwbPGbqrj3gtAAV8kZ-JnbLXPzYHUpwkmM7lGz19up-Ml75wvzTBete7hOqHtIsGRkeqwunGkWXf_cud8cboN3sqI0bwEINHCE_wR1TOA';  // Replace with your valid token
+
+      // Clear the output area before starting the request
+      const outputDiv = document.getElementById('output');
+      outputDiv.textContent = '';  // Clear previous content
+
+      try {
+        const response = await fetch(`http://localhost:5000/api/stream/${chatId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.body) {
+          outputDiv.textContent = "Stream not supported by the browser.";
+          console.error("Stream not supported by the browser.");
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        // Function to process streaming response
+        async function processStream({ done, value }) {
+          if (done) {
+            console.log('Stream complete');
+            outputDiv.textContent += '\nStream complete.';
+            return;
+          }
+
+          const chunk = decoder.decode(value, { stream: true });
+          console.log('Received chunk:', chunk);
+
+          // Append chunk to the output area
+          outputDiv.textContent += chunk;
+
+          // Scroll to the bottom as new content arrives
+          outputDiv.scrollTop = outputDiv.scrollHeight;
+
+          // Process the next chunk
+          return reader.read().then(processStream);
+        }
+
+        // Start reading the stream
+        reader.read().then(processStream);
+
+      } catch (error) {
+        console.error('Error:', error);
+        outputDiv.textContent = 'Error occurred while streaming.';
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <h1>Streaming API Test with Custom Parameters</h1>
+
+  <div>
+    <label for="message">Message:</label>
+    <input type="text" id="message" value="What is the capital of France?" required>
+  </div>
+
+  <div>
+    <label for="topP">TopP:</label>
+    <input type="number" id="topP" value="1.0" step="0.1" min="0.1" max="1.0">
+  </div>
+
+  <div>
+    <label for="topK">TopK:</label>
+    <input type="number" id="topK" value="40" step="1" min="1">
+  </div>
+
+  <div>
+    <label for="temperature">Temperature:</label>
+    <input type="number" id="temperature" value="0.7" step="0.1" min="0.1" max="1.0">
+  </div>
+
+  <div>
+    <label for="outputLength">Output Length:</label>
+    <input type="number" id="outputLength" value="2048" step="100" min="100">
+  </div>
+
+  <button onclick="sendStreamingRequest()">Test Streaming Request</button>
+
+  <h2>Stream Output:</h2>
+  <div id="output"></div> <!-- This is where the streamed data will appear -->
+
+</body>
+</html>

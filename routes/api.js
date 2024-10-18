@@ -470,10 +470,10 @@ router.post('/bot/:botId/message', botApiKeyMiddleware, async (req, res) => {
 router.post('/bot/:botId/stream', botApiKeyMiddleware, async (req, res) => {
   try {
     const { botId } = req.params;
-    const { message } = req.body;
+    const { messages } = req.body;
 
-    if (!message || message.trim() === '') {
-      return res.status(400).json({ error: 'Message is required' });
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'Messages array is required and cannot be empty' });
     }
 
     // Ensure the botId from the URL matches the authenticated bot
@@ -499,10 +499,19 @@ router.post('/bot/:botId/stream', botApiKeyMiddleware, async (req, res) => {
 
     if (modelName.startsWith('openai:') || modelName.startsWith('gemini:')) {
       // Prepare the messages for the model
-      const modelMessages = [
-        { role: 'system', content: systemContext },
-        { role: 'user', content: message },
-      ];
+      // Prepare the modelMessages array by adding system context first
+      const modelMessages = [{ role: 'system', content: systemContext }];
+
+      // Append each message from the request body
+      for (const message of messages) {
+        if (!message.role || !message.content || message.content.trim() === '') {
+          return res.status(400).json({ error: 'Each message must have a role and non-empty content' });
+        }
+        modelMessages.push({
+          role: message.role,
+          content: message.content,
+        });
+      }
 
       // Get the model instance
       const model = getModelInstance(modelName, kwargs);
@@ -574,12 +583,14 @@ router.post('/bot/:botId/stream', botApiKeyMiddleware, async (req, res) => {
       // Save the message and response to Firestore
       const messagesRef = db.collection('bots').doc(botId).collection('messages');
 
-      // Save user message
-      await messagesRef.add({
-        role: 'user',
-        content: message,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      // Save each user message
+      for (const message of messages) {
+        await messagesRef.add({
+          role: message.role,
+          content: message.content,
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
 
       // Save bot response
       await messagesRef.add({
