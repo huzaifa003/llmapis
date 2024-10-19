@@ -1118,7 +1118,6 @@ router.get('/bot/:botId/widget', async (req, res) => {
   const { botId } = req.params;
   const { apiKey } = req.query;
 
-  // Return the HTML/CSS/JS page that creates the bot UI widget
   const widgetHTML = `
 <!DOCTYPE html>
 <html lang="en">
@@ -1127,45 +1126,178 @@ router.get('/bot/:botId/widget', async (req, res) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chatbot Widget</title>
   <style>
-    body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-    .chat-container { width: 100%; height: 100%; display: flex; flex-direction: column; }
-    .chat-box { flex: 1; border: 1px solid #ddd; padding: 10px; overflow-y: scroll; }
-    .chat-input { padding: 10px; border: 1px solid #ddd; width: calc(100% - 20px); margin: 10px; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f4f4;
+    }
+
+    .chat-container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #e9ecef;
+    }
+
+    .chat-widget {
+      width: 400px;
+      height: 550px;
+      background-color: #fff;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #ddd;
+    }
+
+    .chat-box {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      background-color: #fafafa;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .chat-bubble {
+      max-width: 75%;
+      padding: 12px 18px;
+      border-radius: 20px;
+      font-size: 15px;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+
+    .chat-bubble.user {
+      background-color: #007bff;
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 5px;
+      text-align: right;
+    }
+
+    .chat-bubble.bot {
+      background-color: #f1f1f1;
+      color: #333;
+      align-self: flex-start;
+      border-bottom-left-radius: 5px;
+      text-align: left;
+    }
+
+    .chat-input-container {
+      display: flex;
+      padding: 15px;
+      border-top: 1px solid #ddd;
+      background-color: #fff;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 12px 15px;
+      border: 1px solid #ddd;
+      border-radius: 25px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    .chat-input:focus {
+      border-color: #007bff;
+    }
+
+    .send-button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      border: none;
+      border-radius: 25px;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .send-button:disabled {
+      background-color: #aaa;
+    }
+
+    .send-button:hover:not(:disabled) {
+      background-color: #0056b3;
+    }
+
+    .chat-box::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .chat-box::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+    }
+
   </style>
 </head>
 <body>
   <div class="chat-container">
-    <div id="chat-box" class="chat-box"></div>
-    <input type="text" id="chat-input" class="chat-input" placeholder="Type a message..." />
+    <div class="chat-widget">
+      <div id="chat-box" class="chat-box"></div>
+      <div class="chat-input-container">
+        <input type="text" id="chat-input" class="chat-input" placeholder="Type a message..." />
+        <button id="send-button" class="send-button" disabled>Send</button>
+      </div>
+    </div>
   </div>
 
   <script>
     const chatBox = document.getElementById('chat-box');
     const chatInput = document.getElementById('chat-input');
+    const sendButton = document.getElementById('send-button');
     const apiKey = '${apiKey}';
     const botId = '${botId}';
     const apiUrl = 'http://localhost:5000/api/bot/' + botId + '/stream';
 
-    chatInput.addEventListener('keypress', function(event) {
-      if (event.key === 'Enter') {
-        const userMessage = chatInput.value;
-        if (userMessage.trim()) {
-          // Add user message to chat
-          chatBox.innerHTML += '<p><strong>You:</strong> ' + userMessage + '</p>';
-          chatInput.value = '';
+    chatInput.addEventListener('input', function() {
+      sendButton.disabled = chatInput.value.trim() === '';
+    });
 
-          // Send user message to bot API
-          fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
-            body: JSON.stringify({ messages: [{ role: 'user', content: userMessage }] })
-          })
-          .then(response => response.text())
-          .then(botResponse => {
-            chatBox.innerHTML += '<p><strong>Bot:</strong> ' + botResponse + '</p>';
-            chatBox.scrollTop = chatBox.scrollHeight;
-          });
-        }
+    function appendMessage(content, className) {
+      const bubble = document.createElement('div');
+      bubble.classList.add('chat-bubble', className);
+      bubble.innerHTML = content;
+      chatBox.appendChild(bubble);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function sendMessage() {
+      const userMessage = chatInput.value;
+      if (userMessage.trim()) {
+        // Add user message to chat
+        appendMessage(userMessage, 'user');
+        chatInput.value = '';
+        sendButton.disabled = true;
+
+        // Send user message to bot API
+        fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+          body: JSON.stringify({ messages: [{ role: 'user', content: userMessage }] })
+        })
+        .then(response => response.text())
+        .then(botResponse => {
+          appendMessage(botResponse, 'bot');
+        });
+      }
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+
+    chatInput.addEventListener('keypress', function(event) {
+      if (event.key === 'Enter' && !sendButton.disabled) {
+        sendMessage();
       }
     });
   </script>
