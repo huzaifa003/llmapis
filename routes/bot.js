@@ -820,4 +820,24 @@ router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) =
     }
 });
 
+
+router.get("/get-all-bots",authMiddleware, async (req, res) => {
+    try {
+        const db = admin.firestore();
+        const botsRef = db.collection('bots');
+        const bots = await botsRef.get().then((querySnapshot) => {
+            const bots = [];
+            querySnapshot.forEach((doc) => {
+                bots.push({
+                    id: doc.id,
+                    ...doc.data(),
+                });
+            });
+            res.send(bots);
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to retrieve all bots', details: error.message });
+    }
+})
+
 export default router;
