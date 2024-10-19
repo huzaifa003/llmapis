@@ -26,6 +26,7 @@ const botApiKeyMiddleware = async (req, res, next) => {
       modelName: botData.modelName,
       kwargs: botData.kwargs,
       ownerUserId: botData.ownerUserId, // Include ownerUserId
+      apiKey: apiKey,
     };
 
     next();

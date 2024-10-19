@@ -986,4 +986,132 @@ router.get('/get-models', async (req, res) => {
   }
 });
 
+router.get('/bot/:botId/code-snippet/:language', botApiKeyMiddleware, async (req, res) => {
+  try {
+    const { botId, language } = req.params;
+
+    // Ensure the botId matches the authenticated bot
+    if (botId !== req.bot.botId) {
+      return res.status(403).json({ error: 'Bot ID mismatch' });
+    }
+
+    const apiKey = req.bot.apiKey;  // Assuming the botApiKeyMiddleware adds apiKey to req.bot
+    const endpoint = `http://localhost:5000/bot/${botId}/stream`;
+
+    // JavaScript (Node.js) example
+    const jsCode = `
+const axios = require('axios');
+
+const API_KEY = '${apiKey}';
+const BOT_ID = '${botId}';
+const URL = '${endpoint}';
+
+async function sendMessage(messages) {
+  const response = await axios.post(URL, { messages }, {
+    headers: { 'x-api-key': API_KEY }
+  });
+  console.log(response.data);
+}
+
+const messages = [
+  { role: 'user', content: 'Hello, how are you?' },
+  { role: 'user', content: 'Tell me a joke!' }
+];
+
+sendMessage(messages);
+`;
+
+    // Python example
+    const pythonCode = `
+import requests
+
+API_KEY = '${apiKey}'
+BOT_ID = '${botId}'
+URL = '${endpoint}'
+
+def send_message(messages):
+    headers = { 'x-api-key': API_KEY }
+    response = requests.post(URL, json={'messages': messages}, headers=headers)
+    print(response.json())
+
+messages = [
+    {'role': 'user', 'content': 'Hello, how are you?'},
+    {'role': 'user', 'content': 'Tell me a joke!'}
+]
+
+send_message(messages)
+`;
+
+    // cURL example
+    const curlCode = `
+curl -X POST ${endpoint} \\
+-H "x-api-key: ${apiKey}" \\
+-H "Content-Type: application/json" \\
+-d '{
+  "messages": [
+    { "role": "user", "content": "Hello, how are you?" },
+    { "role": "user", "content": "Tell me a joke!" }
+  ]
+}'
+`;
+
+    // PHP example
+    const phpCode = `
+<?php
+$apiKey = '${apiKey}';
+$botId = '${botId}';
+$url = '${endpoint}';
+
+$messages = [
+    ["role" => "user", "content" => "Hello, how are you?"],
+    ["role" => "user", "content" => "Tell me a joke!"]
+];
+
+$options = [
+    'http' => [
+        'header'  => "Content-type: application/json\\r\\n" .
+                     "x-api-key: $apiKey\\r\\n",
+        'method'  => 'POST',
+        'content' => json_encode(['messages' => $messages]),
+    ],
+];
+$context  = stream_context_create($options);
+$result = file_get_contents($url, false, $context);
+if ($result === FALSE) { /* Handle error */ }
+
+var_dump($result);
+?>
+`;
+
+    let codeSnippet = '';
+
+    // Select the language based on the URL
+    switch (language.toLowerCase()) {
+      case 'js':
+      case 'javascript':
+        codeSnippet = jsCode;
+        break;
+      case 'python':
+        codeSnippet = pythonCode;
+        break;
+      case 'curl':
+        codeSnippet = curlCode;
+        break;
+      case 'php':
+        codeSnippet = phpCode;
+        break;
+      default:
+        return res.status(400).json({ error: 'Invalid language selection. Choose from js, python, curl, php.' });
+    }
+
+    res.send(codeSnippet);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to generate code snippet', details: error.message });
+  }
+});
+
+
+
+
+
 export default router;
