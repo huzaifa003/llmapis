@@ -21,8 +21,8 @@ admin.initializeApp({
 // Use CORS middleware
 app.use(cors());  // This enables CORS for all routes by default
 
-//Logging
-app.use(logging);
+//Logging for debugging
+// app.use(logging);
 
 // Apply express.json() to all routes except for the webhook
 app.use((req, res, next) => {
