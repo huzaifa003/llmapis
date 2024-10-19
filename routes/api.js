@@ -1112,6 +1112,100 @@ var_dump($result);
 
 
 
+// routes/api.js
+
+router.get('/bot/:botId/widget', async (req, res) => {
+  const { botId } = req.params;
+  const { apiKey } = req.query;
+
+  // Return the HTML/CSS/JS page that creates the bot UI widget
+  const widgetHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatbot Widget</title>
+  <style>
+    body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    .chat-container { width: 100%; height: 100%; display: flex; flex-direction: column; }
+    .chat-box { flex: 1; border: 1px solid #ddd; padding: 10px; overflow-y: scroll; }
+    .chat-input { padding: 10px; border: 1px solid #ddd; width: calc(100% - 20px); margin: 10px; }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div id="chat-box" class="chat-box"></div>
+    <input type="text" id="chat-input" class="chat-input" placeholder="Type a message..." />
+  </div>
+
+  <script>
+    const chatBox = document.getElementById('chat-box');
+    const chatInput = document.getElementById('chat-input');
+    const apiKey = '${apiKey}';
+    const botId = '${botId}';
+    const apiUrl = 'http://localhost:5000/api/bot/' + botId + '/stream';
+
+    chatInput.addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        const userMessage = chatInput.value;
+        if (userMessage.trim()) {
+          // Add user message to chat
+          chatBox.innerHTML += '<p><strong>You:</strong> ' + userMessage + '</p>';
+          chatInput.value = '';
+
+          // Send user message to bot API
+          fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+            body: JSON.stringify({ messages: [{ role: 'user', content: userMessage }] })
+          })
+          .then(response => response.text())
+          .then(botResponse => {
+            chatBox.innerHTML += '<p><strong>Bot:</strong> ' + botResponse + '</p>';
+            chatBox.scrollTop = chatBox.scrollHeight;
+          });
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+`;
+
+  res.send(widgetHTML);
+});
+
+
+router.get('/bot/:botId/embed', botApiKeyMiddleware, async (req, res) => {
+  try {
+    const { botId } = req.params;
+    const { width = 400, height = 600 } = req.query;  // Allow custom width and height
+
+    const apiKey = req.bot.apiKey;
+    const embedUrl = `http://localhost:5000/bot/${botId}/widget?apiKey=${apiKey}`;
+
+    const embedCode = `
+<iframe
+  src="${embedUrl}"
+  width="${width}"
+  height="${height}"
+  style="border:none; overflow:hidden"
+  scrolling="no"
+  frameborder="0"
+  allowfullscreen="true">
+</iframe>
+`;
+
+    res.json({ embedCode });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to generate embed code', details: error.message });
+  }
+});
+
+
+
+
 
 
 export default router;
