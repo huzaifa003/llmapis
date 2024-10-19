@@ -373,6 +373,33 @@ router.post('/bot', authMiddleware, async (req, res) => {
   }
 });
 
+// routes/api.js
+
+router.post('/bot/:botId/chat/start', botApiKeyMiddleware, async (req, res) => {
+  try {
+    const { botId } = req.params;
+    const { name } = req.body;  // Optional chat name
+
+    // Ensure the botId matches the authenticated bot
+    if (botId !== req.bot.botId) {
+      return res.status(403).json({ error: 'Bot ID mismatch' });
+    }
+
+    const db = admin.firestore();
+    const chatsRef = db.collection('bots').doc(botId).collection('chats');
+
+    // Create a new chat session with a name (optional) and a creation timestamp
+    const chatDoc = await chatsRef.add({
+      name: name || 'Untitled Chat',  // Default to 'Untitled Chat' if no name provided
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.json({ chatId: chatDoc.id, name: name || 'Untitled Chat' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to start chat session', details: error.message });
+  }
+});
+
 
 router.post('/bot/:botId/message', botApiKeyMiddleware, async (req, res) => {
   try {
