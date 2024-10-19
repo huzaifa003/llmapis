@@ -259,11 +259,6 @@ router.post(
 
     try {
       const db = admin.firestore();
-      
-
-      
-      
-
       // Prepare the conversation history
       const modelMessages = [];
 
@@ -341,37 +336,32 @@ router.post(
 );
 
 
-// routes/api.js
-
-router.post('/bot', authMiddleware, async (req, res) => {
+router.get('/bot/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) => {
   try {
-    const { systemContext, modelName, kwargs } = req.body;
+    const { botId, chatId } = req.params;
+    const { width = 400, height = 600 } = req.query;  // Allow custom width and height
 
-    if (!systemContext) {
-      return res.status(400).json({ error: 'System context is required' });
-    }
+    const apiKey = req.bot.apiKey;
+    const embedUrl = `http://localhost:5000/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}`;
 
-    const db = admin.firestore();
-    const botsRef = db.collection('bots');
+    const embedCode = `
+<iframe
+  src="${embedUrl}"
+  width="${width}"
+  height="${height}"
+  style="border:none; overflow:hidden"
+  scrolling="no"
+  frameborder="0"
+  allowfullscreen="true">
+</iframe>
+`;
 
-    // Generate a unique API key for the bot
-    const apiKey = generateApiKey();
-
-    // Create the bot document
-    const botDocRef = await botsRef.add({
-      systemContext,
-      apiKey,
-      ownerUserId: req.user.uid,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      modelName: modelName || 'openai:gpt-3.5-turbo', // default model
-      kwargs: kwargs || {}, // optional model parameters
-    });
-
-    res.json({ botId: botDocRef.id, apiKey });
+    res.json({ embedCode });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create bot', details: error.message });
+    res.status(500).json({ error: 'Failed to generate embed code', details: error.message });
   }
 });
+
 
 // routes/api.js
 
@@ -494,9 +484,9 @@ router.post('/bot/:botId/message', botApiKeyMiddleware, async (req, res) => {
 });
 
 
-router.post('/bot/:botId/stream', botApiKeyMiddleware, async (req, res) => {
+router.post('/bot/:botId/chat/:chatId/stream', botApiKeyMiddleware, async (req, res) => {
   try {
-    const { botId } = req.params;
+    const { botId, chatId } = req.params;
     const { messages } = req.body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -514,7 +504,6 @@ router.post('/bot/:botId/stream', botApiKeyMiddleware, async (req, res) => {
     const { systemContext, modelName, kwargs, ownerUserId } = req.bot;
 
     // Ensure the owner user exists
-    console.log(ownerUserId);
     const userRef = db.collection('users').doc(ownerUserId);
     const userDoc = await userRef.get();
     if (!userDoc.exists) {
@@ -526,7 +515,6 @@ router.post('/bot/:botId/stream', botApiKeyMiddleware, async (req, res) => {
 
     if (modelName.startsWith('openai:') || modelName.startsWith('gemini:')) {
       // Prepare the messages for the model
-      // Prepare the modelMessages array by adding system context first
       const modelMessages = [{ role: 'system', content: systemContext }];
 
       // Append each message from the request body
@@ -554,7 +542,7 @@ router.post('/bot/:botId/stream', botApiKeyMiddleware, async (req, res) => {
         // OpenAI streaming
         const response = await model.stream(modelMessages);
         for await (const chunk of response) {
-          let chunkJson = chunk.toJSON();
+          const chunkJson = chunk.toJSON();
           if (chunkJson.kwargs != undefined) {
             responseText += chunkJson.kwargs.content;
             res.write(chunkJson.kwargs.content);
@@ -563,16 +551,13 @@ router.post('/bot/:botId/stream', botApiKeyMiddleware, async (req, res) => {
             }
           }
         }
-
         res.end();
-        console.log('Total Tokens:', tokensUsed);
-        console.log('Content:', responseText);
         
       } else if (modelName.startsWith('gemini:')) {
         // Gemini streaming
         const response = await model.stream(modelMessages);
         for await (const chunk of response) {
-          let chunkJson = chunk.toJSON();
+          const chunkJson = chunk.toJSON();
           if (chunkJson.kwargs != undefined) {
             if (
               chunkJson.kwargs.content != undefined &&
@@ -583,7 +568,6 @@ router.post('/bot/:botId/stream', botApiKeyMiddleware, async (req, res) => {
               res.write(chunkJson.kwargs.content);
             }
             if (chunkJson.kwargs.usage_metadata != undefined) {
-              console.log(chunkJson.kwargs.usage_metadata.total_tokens);
               if (
                 !isNaN(chunkJson.kwargs.usage_metadata.total_tokens) &&
                 chunkJson.kwargs.usage_metadata.total_tokens != '' &&
@@ -594,12 +578,7 @@ router.post('/bot/:botId/stream', botApiKeyMiddleware, async (req, res) => {
             }
           }
         }
-
         res.end();
-
-        console.log('Total Tokens:', tokensUsed);
-        console.log('Content:', responseText);
-        
       }
 
       // Update usage stats for the bot's owner
@@ -608,7 +587,7 @@ router.post('/bot/:botId/stream', botApiKeyMiddleware, async (req, res) => {
       });
 
       // Save the message and response to Firestore
-      const messagesRef = db.collection('bots').doc(botId).collection('messages');
+      const messagesRef = db.collection('bots').doc(botId).collection('chats').doc(chatId).collection('messages');
 
       // Save each user message
       for (const message of messages) {
@@ -628,45 +607,6 @@ router.post('/bot/:botId/stream', botApiKeyMiddleware, async (req, res) => {
 
       return;
 
-    } else if (modelName.startsWith('imagegen:')) {
-      // Handle image generation
-      // For image generation, streaming may not be applicable
-      // So we handle it as before
-
-      const modelId = modelName.split(":")[1];
-
-      // Call the generateImage function
-      const response = await generateImage(message, modelId);
-
-      // The response may contain an ID or URL of the generated image
-      const responseText = response.id || response.imageUrl;
-
-      // Update usage stats for the bot's owner
-      await userRef.update({
-        imageGenerationCount: admin.firestore.FieldValue.increment(1),
-      });
-
-      // Save the message and response to Firestore
-      const messagesRef = db.collection('bots').doc(botId).collection('messages');
-
-      // Save user message
-      await messagesRef.add({
-        role: 'user',
-        content: message,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      // Save bot response
-      await messagesRef.add({
-        role: 'assistant',
-        content: responseText,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      res.json({ response: responseText });
-
-    } else {
-      throw new Error('Model not supported.');
     }
 
   } catch (error) {
@@ -676,9 +616,10 @@ router.post('/bot/:botId/stream', botApiKeyMiddleware, async (req, res) => {
 
 
 
-router.post('/bot/:botId/image', botApiKeyMiddleware, async (req, res) => {
+
+router.post('/bot/:botId/chat/:chatId/image', botApiKeyMiddleware, async (req, res) => {
   try {
-    const { botId } = req.params;
+    const { botId, chatId } = req.params;
     const { message } = req.body;
 
     if (!message || message.trim() === '') {
@@ -704,18 +645,16 @@ router.post('/bot/:botId/image', botApiKeyMiddleware, async (req, res) => {
 
     if (modelName.startsWith('imagegen:')) {
       // Handle image generation
-      // For image generation, streaming may not be applicable
-      // So we handle it as before
 
       const modelId = modelName.split(":")[1];
 
       // Call the generateImage function
       const response = await generateImage(message, modelId);
-      
-      if (response.status === 'error'){
-        throw new Error('SD API Returned an Error Named : ' + response.message);
+
+      if (response.status === 'error') {
+        throw new Error('SD API Returned an Error: ' + response.message);
       }
-        
+
       // The response may contain an ID or URL of the generated image
       const responseText = response.id || response.imageUrl;
 
@@ -725,7 +664,7 @@ router.post('/bot/:botId/image', botApiKeyMiddleware, async (req, res) => {
       });
 
       // Save the message and response to Firestore
-      const messagesRef = db.collection('bots').doc(botId).collection('messages');
+      const messagesRef = db.collection('bots').doc(botId).collection('chats').doc(chatId).collection('messages');
 
       // Save user message
       await messagesRef.add({
@@ -751,6 +690,7 @@ router.post('/bot/:botId/image', botApiKeyMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Failed to process message', details: error.message });
   }
 });
+
 
 
 
@@ -1140,9 +1080,8 @@ var_dump($result);
 
 
 // routes/api.js
-
-router.get('/bot/:botId/widget', async (req, res) => {
-  const { botId } = req.params;
+router.get('/bot/:botId/chat/:chatId/widget', async (req, res) => {
+  const { botId, chatId } = req.params;
   const { apiKey } = req.query;
 
   const widgetHTML = `
@@ -1285,7 +1224,8 @@ router.get('/bot/:botId/widget', async (req, res) => {
     const sendButton = document.getElementById('send-button');
     const apiKey = '${apiKey}';
     const botId = '${botId}';
-    const apiUrl = 'http://localhost:5000/api/bot/' + botId + '/stream';
+    const chatId = '${chatId}';
+    const apiUrl = 'http://localhost:5000/api/bot/' + botId + '/chat/' + chatId + '/stream';
 
     chatInput.addEventListener('input', function() {
       sendButton.disabled = chatInput.value.trim() === '';
@@ -1336,13 +1276,14 @@ router.get('/bot/:botId/widget', async (req, res) => {
 });
 
 
-router.get('/bot/:botId/embed', botApiKeyMiddleware, async (req, res) => {
+
+router.get('/bot/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) => {
   try {
-    const { botId } = req.params;
+    const { botId, chatId } = req.params;
     const { width = 400, height = 600 } = req.query;  // Allow custom width and height
 
     const apiKey = req.bot.apiKey;
-    const embedUrl = `http://localhost:5000/bot/${botId}/widget?apiKey=${apiKey}`;
+    const embedUrl = `http://localhost:5000/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}`;
 
     const embedCode = `
 <iframe
