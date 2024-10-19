@@ -47,6 +47,68 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 });
 
+// Edit a bot by botId
+router.put('/:botId', authMiddleware, async (req, res) => {
+    try {
+        const { botId } = req.params;
+        const { botName, systemContext, modelName, kwargs } = req.body;
+
+        if (!botName || botName.trim() === '') {
+            return res.status(400).json({ error: 'Bot name is required' });
+        }
+
+        if (!systemContext) {
+            return res.status(400).json({ error: 'System context is required' });
+        }
+
+        const db = admin.firestore();
+        const botRef = db.collection('bots').doc(botId);
+
+        // Check if the bot exists
+        const botDoc = await botRef.get();
+        if (!botDoc.exists) {
+            return res.status(404).json({ error: 'Bot not found' });
+        }
+
+        // Update the bot document
+        await botRef.update({
+            botName: botName.trim(),
+            systemContext,
+            modelName: modelName || 'openai:gpt-3.5-turbo',
+            kwargs: kwargs || {},
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(), // Optional updated timestamp
+        });
+
+        res.json({ message: 'Bot updated successfully', botId });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update bot', details: error.message });
+    }
+});
+
+
+// Delete a bot by botId
+router.delete('/:botId', authMiddleware, async (req, res) => {
+    try {
+        const { botId } = req.params;
+
+        const db = admin.firestore();
+        const botRef = db.collection('bots').doc(botId);
+
+        // Check if the bot exists
+        const botDoc = await botRef.get();
+        if (!botDoc.exists) {
+            return res.status(404).json({ error: 'Bot not found' });
+        }
+
+        // Delete the bot document
+        await botRef.delete();
+
+        res.json({ message: 'Bot deleted successfully', botId });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete bot', details: error.message });
+    }
+});
+
 
 
 router.post('/:botId/chat/start', botApiKeyMiddleware, async (req, res) => {
