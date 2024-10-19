@@ -7,84 +7,84 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import apiKeyMiddleware from '../middleware/apiKeyMiddleware.js';
 import { getModelInstance, incrementTimestamp } from '../services/langchainServices.js';
 import { fetchImg, generateImage } from '../services/stableDiffusionService.js';
-import {modelsData, imageModelsData} from '../data/modelList.js';
+import { modelsData, imageModelsData } from '../data/modelList.js';
 import { generateApiKey } from '../services/apiKeyGenerator.js';
 import botApiKeyMiddleware from '../middleware/botApiKeyMiddleware.js';
 
 const router = express.Router();
 router.post('/', authMiddleware, async (req, res) => {
     try {
-      const { botName, systemContext, modelName, kwargs } = req.body;
-  
-      if (!botName || botName.trim() === '') {
-        return res.status(400).json({ error: 'Bot name is required' });
-      }
-  
-      if (!systemContext) {
-        return res.status(400).json({ error: 'System context is required' });
-      }
-  
-      const db = admin.firestore();
-      const botsRef = db.collection('bots');
-  
-      // Generate a unique API key for the bot
-      const apiKey = generateApiKey();
-  
-      // Create the bot document with botName
-      const botDocRef = await botsRef.add({
-        botName: botName.trim(), // store the bot's name
-        systemContext,
-        apiKey,
-        ownerUserId: req.user.uid,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        modelName: modelName || 'openai:gpt-3.5-turbo', // default model
-        kwargs: kwargs || {}, // optional model parameters
-      });
-  
-      res.json({ botId: botDocRef.id, apiKey });
+        const { botName, systemContext, modelName, kwargs } = req.body;
+
+        if (!botName || botName.trim() === '') {
+            return res.status(400).json({ error: 'Bot name is required' });
+        }
+
+        if (!systemContext) {
+            return res.status(400).json({ error: 'System context is required' });
+        }
+
+        const db = admin.firestore();
+        const botsRef = db.collection('bots');
+
+        // Generate a unique API key for the bot
+        const apiKey = generateApiKey();
+
+        // Create the bot document with botName
+        const botDocRef = await botsRef.add({
+            botName: botName.trim(), // store the bot's name
+            systemContext,
+            apiKey,
+            ownerUserId: req.user.uid,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            modelName: modelName || 'openai:gpt-3.5-turbo', // default model
+            kwargs: kwargs || {}, // optional model parameters
+        });
+
+        res.json({ botId: botDocRef.id, apiKey });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to create bot', details: error.message });
+        res.status(500).json({ error: 'Failed to create bot', details: error.message });
     }
-  });
-  
-  
-  
-  router.post('/:botId/chat/start', botApiKeyMiddleware, async (req, res) => {
+});
+
+
+
+router.post('/:botId/chat/start', botApiKeyMiddleware, async (req, res) => {
     try {
-      const { botId } = req.params;
-      const { name } = req.body;  // Optional chat name
-  
-      // Ensure the botId matches the authenticated bot
-      if (botId !== req.bot.botId) {
-        return res.status(403).json({ error: 'Bot ID mismatch' });
-      }
-  
-      const db = admin.firestore();
-      const chatsRef = db.collection('bots').doc(botId).collection('chats');
-  
-      // Create a new chat session with a name (optional) and a creation timestamp
-      const chatDoc = await chatsRef.add({
-        name: name || 'Untitled Chat',  // Default to 'Untitled Chat' if no name provided
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-  
-      res.json({ chatId: chatDoc.id, name: name || 'Untitled Chat' });
+        const { botId } = req.params;
+        const { name } = req.body;  // Optional chat name
+
+        // Ensure the botId matches the authenticated bot
+        if (botId !== req.bot.botId) {
+            return res.status(403).json({ error: 'Bot ID mismatch' });
+        }
+
+        const db = admin.firestore();
+        const chatsRef = db.collection('bots').doc(botId).collection('chats');
+
+        // Create a new chat session with a name (optional) and a creation timestamp
+        const chatDoc = await chatsRef.add({
+            name: name || 'Untitled Chat',  // Default to 'Untitled Chat' if no name provided
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        res.json({ chatId: chatDoc.id, name: name || 'Untitled Chat' });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to start chat session', details: error.message });
+        res.status(500).json({ error: 'Failed to start chat session', details: error.message });
     }
-  });
-  
-  
-  
-  router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) => {
+});
+
+
+
+router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) => {
     try {
-      const { botId, chatId } = req.params;
-      const { width = 400, height = 600 } = req.query;  // Allow custom width and height
-  
-      const apiKey = req.bot.apiKey;
-      const embedUrl = `http://localhost:5000/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}`;
-  
-      const embedCode = `
+        const { botId, chatId } = req.params;
+        const { width = 400, height = 600 } = req.query;  // Allow custom width and height
+
+        const apiKey = req.bot.apiKey;
+        const embedUrl = `http://localhost:5000/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}`;
+
+        const embedCode = `
   <iframe
     src="${embedUrl}"
     width="${width}"
@@ -95,353 +95,395 @@ router.post('/', authMiddleware, async (req, res) => {
     allowfullscreen="true">
   </iframe>
   `;
-  
-      res.json({ embedCode });
+
+        res.json({ embedCode });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to generate embed code', details: error.message });
+        res.status(500).json({ error: 'Failed to generate embed code', details: error.message });
     }
-  });
-  
-  
-  // routes/api.js
-  
-  
-  
-  router.post('/:botId/message', botApiKeyMiddleware, async (req, res) => {
+});
+
+
+// routes/api.js
+
+
+
+router.post('/:botId/message', botApiKeyMiddleware, async (req, res) => {
     try {
-      const { botId } = req.params;
-      const { message } = req.body;
-  
-      if (!message || message.trim() === '') {
-        return res.status(400).json({ error: 'Message is required' });
-      }
-  
-      // Ensure the botId from the URL matches the authenticated bot
-      if (botId !== req.bot.botId) {
-        return res.status(403).json({ error: 'Bot ID mismatch' });
-      }
-  
-      const db = admin.firestore();
-  
-      // Get the bot's system context, modelName, kwargs, and ownerUserId
-      const { systemContext, modelName, kwargs, ownerUserId } = req.bot;
-  
-      // Ensure the owner user exists
-      const userRef = db.collection('users').doc(ownerUserId);
-      const userDoc = await userRef.get();
-      if (!userDoc.exists) {
-        throw new Error('Owner user does not exist');
-      }
-  
-      let responseText;
-      let tokensUsed = 0;
-  
-      if (modelName.startsWith('openai:') || modelName.startsWith('gemini:')) {
-        // Prepare the messages for the model
-        const modelMessages = [
-          { role: 'system', content: systemContext },
-          { role: 'user', content: message },
-        ];
-  
-        // Get the model instance
-        const model = getModelInstance(modelName, kwargs);
-  
-        // Generate the response
-        const response = await model.invoke(modelMessages);
-        const jsonResponse = response.toJSON();
-        responseText = jsonResponse.kwargs.content;
-        tokensUsed = jsonResponse.kwargs.usage_metadata.total_tokens;
-  
-        // Update usage stats for the bot's owner
-        await userRef.update({
-          tokenCount: admin.firestore.FieldValue.increment(tokensUsed),
-        });
-  
-      } else if (modelName.startsWith('imagegen:')) {
-        // Handle image generation
-        const modelId = modelName.split(":")[1];
-  
-        // Call the generateImage function
-        const response = await generateImage(message, modelId);
-  
-        // The response may contain an ID or URL of the generated image
-        responseText = response.id || response.imageUrl;
-  
-        // Update usage stats for the bot's owner
-        await userRef.update({
-          imageGenerationCount: admin.firestore.FieldValue.increment(1),
-        });
-  
-      } else {
-        throw new Error('Model not supported.');
-      }
-  
-      // Save the message and response to Firestore
-      const messagesRef = db.collection('bots').doc(botId).collection('messages');
-  
-      // Save user message
-      await messagesRef.add({
-        role: 'user',
-        content: message,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
-  
-      // Save bot response
-      await messagesRef.add({
-        role: 'assistant',
-        content: responseText,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
-  
-      res.json({ response: responseText });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to process message', details: error.message });
-    }
-  });
-  
-  
-  router.post('/:botId/chat/:chatId/stream', botApiKeyMiddleware, async (req, res) => {
-    try {
-      const { botId, chatId } = req.params;
-      const { messages } = req.body;
-  
-      if (!messages || !Array.isArray(messages) || messages.length === 0) {
-        return res.status(400).json({ error: 'Messages array is required and cannot be empty' });
-      }
-  
-      // Ensure the botId from the URL matches the authenticated bot
-      if (botId !== req.bot.botId) {
-        return res.status(403).json({ error: 'Bot ID mismatch' });
-      }
-  
-      const db = admin.firestore();
-  
-      // Get the bot's system context, modelName, kwargs, and ownerUserId
-      const { systemContext, modelName, kwargs, ownerUserId } = req.bot;
-  
-      // Ensure the owner user exists
-      const userRef = db.collection('users').doc(ownerUserId);
-      const userDoc = await userRef.get();
-      if (!userDoc.exists) {
-        throw new Error('Owner user does not exist');
-      }
-  
-      let tokensUsed = 0;
-      let responseText = '';
-  
-      if (modelName.startsWith('openai:') || modelName.startsWith('gemini:')) {
-        // Prepare the messages for the model
-        const modelMessages = [{ role: 'system', content: systemContext }];
-  
-        // Append each message from the request body
-        for (const message of messages) {
-          if (!message.role || !message.content || message.content.trim() === '') {
-            return res.status(400).json({ error: 'Each message must have a role and non-empty content' });
-          }
-          modelMessages.push({
-            role: message.role,
-            content: message.content,
-          });
+        const { botId } = req.params;
+        const { message } = req.body;
+
+        if (!message || message.trim() === '') {
+            return res.status(400).json({ error: 'Message is required' });
         }
-  
-        // Get the model instance
-        const model = getModelInstance(modelName, kwargs);
-  
-        // Set headers for streaming
-        res.writeHead(200, {
-          'Content-Type': 'text/plain; charset=utf-8',
-          'Transfer-Encoding': 'chunked',
-          'Connection': 'keep-alive',
-        });
-  
-        if (modelName.startsWith('openai:')) {
-          // OpenAI streaming
-          const response = await model.stream(modelMessages);
-          for await (const chunk of response) {
-            const chunkJson = chunk.toJSON();
-            if (chunkJson.kwargs != undefined) {
-              responseText += chunkJson.kwargs.content;
-              res.write(chunkJson.kwargs.content);
-              if (chunkJson.kwargs.usage_metadata != undefined) {
-                tokensUsed += chunkJson.kwargs.usage_metadata.total_tokens;
-              }
-            }
-          }
-          res.end();
-          
-        } else if (modelName.startsWith('gemini:')) {
-          // Gemini streaming
-          const response = await model.stream(modelMessages);
-          for await (const chunk of response) {
-            const chunkJson = chunk.toJSON();
-            if (chunkJson.kwargs != undefined) {
-              if (
-                chunkJson.kwargs.content != undefined &&
-                chunkJson.kwargs.content != '' &&
-                chunkJson.kwargs.content != 'undefined'
-              ) {
-                responseText += chunkJson.kwargs.content;
-                res.write(chunkJson.kwargs.content);
-              }
-              if (chunkJson.kwargs.usage_metadata != undefined) {
-                if (
-                  !isNaN(chunkJson.kwargs.usage_metadata.total_tokens) &&
-                  chunkJson.kwargs.usage_metadata.total_tokens != '' &&
-                  chunkJson.kwargs.usage_metadata.total_tokens != null
-                ) {
-                  tokensUsed += chunkJson.kwargs.usage_metadata.total_tokens;
-                }
-              }
-            }
-          }
-          res.end();
+
+        // Ensure the botId from the URL matches the authenticated bot
+        if (botId !== req.bot.botId) {
+            return res.status(403).json({ error: 'Bot ID mismatch' });
         }
-  
-        // Update usage stats for the bot's owner
-        await userRef.update({
-          tokenCount: admin.firestore.FieldValue.increment(tokensUsed),
-        });
-  
+
+        const db = admin.firestore();
+
+        // Get the bot's system context, modelName, kwargs, and ownerUserId
+        const { systemContext, modelName, kwargs, ownerUserId } = req.bot;
+
+        // Ensure the owner user exists
+        const userRef = db.collection('users').doc(ownerUserId);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+            throw new Error('Owner user does not exist');
+        }
+
+        let responseText;
+        let tokensUsed = 0;
+
+        if (modelName.startsWith('openai:') || modelName.startsWith('gemini:')) {
+            // Prepare the messages for the model
+            const modelMessages = [
+                { role: 'system', content: systemContext },
+                { role: 'user', content: message },
+            ];
+
+            // Get the model instance
+            const model = getModelInstance(modelName, kwargs);
+
+            // Generate the response
+            const response = await model.invoke(modelMessages);
+            const jsonResponse = response.toJSON();
+            responseText = jsonResponse.kwargs.content;
+            tokensUsed = jsonResponse.kwargs.usage_metadata.total_tokens;
+
+            // Update usage stats for the bot's owner
+            await userRef.update({
+                tokenCount: admin.firestore.FieldValue.increment(tokensUsed),
+            });
+
+        } else if (modelName.startsWith('imagegen:')) {
+            // Handle image generation
+            const modelId = modelName.split(":")[1];
+
+            // Call the generateImage function
+            const response = await generateImage(message, modelId);
+
+            // The response may contain an ID or URL of the generated image
+            responseText = response.id || response.imageUrl;
+
+            // Update usage stats for the bot's owner
+            await userRef.update({
+                imageGenerationCount: admin.firestore.FieldValue.increment(1),
+            });
+
+        } else {
+            throw new Error('Model not supported.');
+        }
+
         // Save the message and response to Firestore
-        const messagesRef = db.collection('bots').doc(botId).collection('chats').doc(chatId).collection('messages');
-  
-        // Save each user message
-        for (const message of messages) {
-          await messagesRef.add({
-            role: message.role,
-            content: message.content,
-            timestamp: admin.firestore.FieldValue.serverTimestamp(),
-          });
-        }
-  
-        // Save bot response
-        await messagesRef.add({
-          role: 'assistant',
-          content: responseText,
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        });
-  
-        return;
-  
-      }
-  
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to process message', details: error.message });
-    }
-  });
-  
-  
-  
-  
-  router.post('/:botId/chat/:chatId/image', botApiKeyMiddleware, async (req, res) => {
-    try {
-      const { botId, chatId } = req.params;
-      const { message } = req.body;
-  
-      if (!message || message.trim() === '') {
-        return res.status(400).json({ error: 'Message is required' });
-      }
-  
-      // Ensure the botId from the URL matches the authenticated bot
-      if (botId !== req.bot.botId) {
-        return res.status(403).json({ error: 'Bot ID mismatch' });
-      }
-  
-      const db = admin.firestore();
-  
-      // Get the bot's system context, modelName, kwargs, and ownerUserId
-      const { systemContext, modelName, kwargs, ownerUserId } = req.bot;
-  
-      // Ensure the owner user exists
-      const userRef = db.collection('users').doc(ownerUserId);
-      const userDoc = await userRef.get();
-      if (!userDoc.exists) {
-        throw new Error('Owner user does not exist');
-      }
-  
-      if (modelName.startsWith('imagegen:')) {
-        // Handle image generation
-  
-        const modelId = modelName.split(":")[1];
-  
-        // Call the generateImage function
-        const response = await generateImage(message, modelId);
-  
-        if (response.status === 'error') {
-          throw new Error('SD API Returned an Error: ' + response.message);
-        }
-  
-        // The response may contain an ID or URL of the generated image
-        const responseText = response.id || response.imageUrl;
-  
-        // Update usage stats for the bot's owner
-        await userRef.update({
-          imageGenerationCount: admin.firestore.FieldValue.increment(1),
-        });
-  
-        // Save the message and response to Firestore
-        const messagesRef = db.collection('bots').doc(botId).collection('chats').doc(chatId).collection('messages');
-  
+        const messagesRef = db.collection('bots').doc(botId).collection('messages');
+
         // Save user message
         await messagesRef.add({
-          role: 'user',
-          content: message,
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            role: 'user',
+            content: message,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
         });
-  
+
         // Save bot response
         await messagesRef.add({
-          role: 'assistant',
-          content: responseText,
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            role: 'assistant',
+            content: responseText,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
         });
-  
-        res.json({ response: responseText });
-  
-      } else {
-        throw new Error('Model not supported.');
-      }
-  
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to process message', details: error.message });
-    }
-  });
 
-  router.post('/get_images', authMiddleware, async (req, res) => {
+        res.json({ response: responseText });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to process message', details: error.message });
+    }
+});
+
+
+router.post('/:botId/chat/:chatId/stream', botApiKeyMiddleware, async (req, res) => {
     try {
-      fetchImg(req.body.request_id).then((response) => {
-        let resp = {...response, type: "image"}
-        res.send(resp)
-      }).catch((error) => {
-        console.log(error)
-        res.send(error)
-      })
-  
+        const { botId, chatId } = req.params;
+        const { messages } = req.body;
+
+        if (!messages || !Array.isArray(messages) || messages.length === 0) {
+            return res.status(400).json({ error: 'Messages array is required and cannot be empty' });
+        }
+
+        // Ensure the botId from the URL matches the authenticated bot
+        if (botId !== req.bot.botId) {
+            return res.status(403).json({ error: 'Bot ID mismatch' });
+        }
+
+        const db = admin.firestore();
+
+        // Get the bot's system context, modelName, kwargs, and ownerUserId
+        const { systemContext, modelName, kwargs, ownerUserId } = req.bot;
+
+        // Ensure the owner user exists
+        const userRef = db.collection('users').doc(ownerUserId);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+            throw new Error('Owner user does not exist');
+        }
+
+        let tokensUsed = 0;
+        let responseText = '';
+
+        // Prepare the messages for the model
+        const modelMessages = [{ role: 'system', content: systemContext }];
+
+        // Append each message from the request body
+        for (const message of messages) {
+            if (!message.role || !message.content || message.content.trim() === '') {
+                return res.status(400).json({ error: 'Each message must have a role and non-empty content' });
+            }
+            modelMessages.push({
+                role: message.role,
+                content: message.content,
+            });
+        }
+
+        // Get the model instance
+        const model = getModelInstance(modelName, kwargs);
+
+        // Set headers for streaming
+        res.writeHead(200, {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Transfer-Encoding': 'chunked',
+            'Connection': 'keep-alive',
+        });
+
+        if (modelName.startsWith('openai:')) {
+            // OpenAI streaming
+            const response = await model.stream(modelMessages);
+            for await (const chunk of response) {
+                const chunkJson = chunk.toJSON();
+                if (chunkJson.kwargs != undefined) {
+                    responseText += chunkJson.kwargs.content;
+                    res.write(chunkJson.kwargs.content);
+                    if (chunkJson.kwargs.usage_metadata != undefined) {
+                        tokensUsed += chunkJson.kwargs.usage_metadata.total_tokens;
+                    }
+                }
+            }
+            res.end();
+
+        } else if (modelName.startsWith('gemini:')) {
+            // Gemini streaming
+            const response = await model.stream(modelMessages);
+            for await (const chunk of response) {
+                const chunkJson = chunk.toJSON();
+                if (chunkJson.kwargs != undefined) {
+                    if (
+                        chunkJson.kwargs.content != undefined &&
+                        chunkJson.kwargs.content != '' &&
+                        chunkJson.kwargs.content != 'undefined'
+                    ) {
+                        responseText += chunkJson.kwargs.content;
+                        res.write(chunkJson.kwargs.content);
+                    }
+                    if (chunkJson.kwargs.usage_metadata != undefined) {
+                        if (
+                            !isNaN(chunkJson.kwargs.usage_metadata.total_tokens) &&
+                            chunkJson.kwargs.usage_metadata.total_tokens != '' &&
+                            chunkJson.kwargs.usage_metadata.total_tokens != null
+                        ) {
+                            tokensUsed += chunkJson.kwargs.usage_metadata.total_tokens;
+                        }
+                    }
+                }
+            }
+            res.end();
+        } else if (modelName.startsWith("llama:") || modelName.startsWith("mixtral")) {
+            const model = getModelInstance(modelName, kwargs);
+
+            // OpenAI model interaction
+            const response = await model.stream(modelMessages);
+            for await (const chunk of response) {
+                let chunkJson = chunk.toJSON();
+                if (chunkJson.kwargs != undefined) {
+                    responseText += chunkJson.kwargs.content;
+                    res.write(chunkJson.kwargs.content);
+                    if (chunkJson.kwargs.usage_metadata != undefined) {
+                        tokensUsed += chunkJson.kwargs.usage_metadata.total_tokens;
+                    }
+                }
+            }
+
+            res.end();
+            console.log('Total Tokens:', tokensUsed);
+            console.log('Content:', responseText);
+
+
+        } else if (modelName.startsWith("anthropic:")) {
+            const model = getModelInstance(modelName, kwargs);
+            console.log(model);
+            // OpenAI model interaction
+            const response = await model.stream(modelMessages);
+            console.log(response)
+            for await (const chunk of response) {
+                let chunkJson = chunk.toJSON();
+                if (chunkJson.kwargs != undefined) {
+                    responseText += chunkJson.kwargs.content;
+                    res.write(chunkJson.kwargs.content);
+                    if (chunkJson.kwargs.usage_metadata != undefined) {
+                        tokensUsed += chunkJson.kwargs.usage_metadata.total_tokens;
+                    }
+                }
+            }
+
+            res.end();
+            console.log('Total Tokens:', tokensUsed);
+            console.log('Content:', responseText);
+        } else {
+            throw new Error('Model not supported.');
+        }
+
+        // Update usage stats for the bot's owner
+        await userRef.update({
+            tokenCount: admin.firestore.FieldValue.increment(tokensUsed),
+        });
+
+        // Save the message and response to Firestore
+        const messagesRef = db.collection('bots').doc(botId).collection('chats').doc(chatId).collection('messages');
+
+        // Save each user message
+        for (const message of messages) {
+            await messagesRef.add({
+                role: message.role,
+                content: message.content,
+                timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        }
+
+        // Save bot response
+        await messagesRef.add({
+            role: 'assistant',
+            content: responseText,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        return;
+
+
+
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to process message', details: error.message });
+    }
+});
+
+
+
+
+router.post('/:botId/chat/:chatId/image', botApiKeyMiddleware, async (req, res) => {
+    try {
+        const { botId, chatId } = req.params;
+        const { message } = req.body;
+
+        if (!message || message.trim() === '') {
+            return res.status(400).json({ error: 'Message is required' });
+        }
+
+        // Ensure the botId from the URL matches the authenticated bot
+        if (botId !== req.bot.botId) {
+            return res.status(403).json({ error: 'Bot ID mismatch' });
+        }
+
+        const db = admin.firestore();
+
+        // Get the bot's system context, modelName, kwargs, and ownerUserId
+        const { systemContext, modelName, kwargs, ownerUserId } = req.bot;
+
+        // Ensure the owner user exists
+        const userRef = db.collection('users').doc(ownerUserId);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+            throw new Error('Owner user does not exist');
+        }
+
+        if (modelName.startsWith('imagegen:')) {
+            // Handle image generation
+
+            const modelId = modelName.split(":")[1];
+
+            // Call the generateImage function
+            const response = await generateImage(message, modelId);
+
+            if (response.status === 'error') {
+                throw new Error('SD API Returned an Error: ' + response.message);
+            }
+
+            // The response may contain an ID or URL of the generated image
+            const responseText = response.id || response.imageUrl;
+
+            // Update usage stats for the bot's owner
+            await userRef.update({
+                imageGenerationCount: admin.firestore.FieldValue.increment(1),
+            });
+
+            // Save the message and response to Firestore
+            const messagesRef = db.collection('bots').doc(botId).collection('chats').doc(chatId).collection('messages');
+
+            // Save user message
+            await messagesRef.add({
+                role: 'user',
+                content: message,
+                timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            });
+
+            // Save bot response
+            await messagesRef.add({
+                role: 'assistant',
+                content: responseText,
+                timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            });
+
+            res.json({ response: responseText });
+
+        } else {
+            throw new Error('Model not supported.');
+        }
+
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to process message', details: error.message });
+    }
+});
+
+router.post('/get_images', authMiddleware, async (req, res) => {
+    try {
+        fetchImg(req.body.request_id).then((response) => {
+            let resp = { ...response, type: "image" }
+            res.send(resp)
+        }).catch((error) => {
+            console.log(error)
+            res.send(error)
+        })
+
     }
     catch (err) {
-      console.log(err);
-      res
-        .status(500)
-        .json({ error: 'Failed to process message.', details: err.message });
-  
-    }
-  })
-  
+        console.log(err);
+        res
+            .status(500)
+            .json({ error: 'Failed to process message.', details: err.message });
 
-  router.get('/:botId/code-snippet/:language', botApiKeyMiddleware, async (req, res) => {
+    }
+})
+
+
+router.get('/:botId/code-snippet/:language', botApiKeyMiddleware, async (req, res) => {
     try {
-      const { botId, language } = req.params;
-  
-      // Ensure the botId matches the authenticated bot
-      if (botId !== req.bot.botId) {
-        return res.status(403).json({ error: 'Bot ID mismatch' });
-      }
-  
-      const apiKey = req.bot.apiKey;  // Assuming the botApiKeyMiddleware adds apiKey to req.bot
-      const endpoint = `http://localhost:5000/bot/${botId}/stream`;
-  
-      // JavaScript (Node.js) example
-      const jsCode = `
+        const { botId, language } = req.params;
+
+        // Ensure the botId matches the authenticated bot
+        if (botId !== req.bot.botId) {
+            return res.status(403).json({ error: 'Bot ID mismatch' });
+        }
+
+        const apiKey = req.bot.apiKey;  // Assuming the botApiKeyMiddleware adds apiKey to req.bot
+        const endpoint = `http://localhost:5000/bot/${botId}/stream`;
+
+        // JavaScript (Node.js) example
+        const jsCode = `
   const axios = require('axios');
   
   const API_KEY = '${apiKey}';
@@ -462,9 +504,9 @@ router.post('/', authMiddleware, async (req, res) => {
   
   sendMessage(messages);
   `;
-  
-      // Python example
-      const pythonCode = `
+
+        // Python example
+        const pythonCode = `
   import requests
   
   API_KEY = '${apiKey}'
@@ -483,9 +525,9 @@ router.post('/', authMiddleware, async (req, res) => {
   
   send_message(messages)
   `;
-  
-      // cURL example
-      const curlCode = `
+
+        // cURL example
+        const curlCode = `
   curl -X POST ${endpoint} \\
   -H "x-api-key: ${apiKey}" \\
   -H "Content-Type: application/json" \\
@@ -496,9 +538,9 @@ router.post('/', authMiddleware, async (req, res) => {
     ]
   }'
   `;
-  
-      // PHP example
-      const phpCode = `
+
+        // PHP example
+        const phpCode = `
   <?php
   $apiKey = '${apiKey}';
   $botId = '${botId}';
@@ -524,41 +566,41 @@ router.post('/', authMiddleware, async (req, res) => {
   var_dump($result);
   ?>
   `;
-  
-      let codeSnippet = '';
-  
-      // Select the language based on the URL
-      switch (language.toLowerCase()) {
-        case 'js':
-        case 'javascript':
-          codeSnippet = jsCode;
-          break;
-        case 'python':
-          codeSnippet = pythonCode;
-          break;
-        case 'curl':
-          codeSnippet = curlCode;
-          break;
-        case 'php':
-          codeSnippet = phpCode;
-          break;
-        default:
-          return res.status(400).json({ error: 'Invalid language selection. Choose from js, python, curl, php.' });
-      }
-  
-      res.send(codeSnippet);
+
+        let codeSnippet = '';
+
+        // Select the language based on the URL
+        switch (language.toLowerCase()) {
+            case 'js':
+            case 'javascript':
+                codeSnippet = jsCode;
+                break;
+            case 'python':
+                codeSnippet = pythonCode;
+                break;
+            case 'curl':
+                codeSnippet = curlCode;
+                break;
+            case 'php':
+                codeSnippet = phpCode;
+                break;
+            default:
+                return res.status(400).json({ error: 'Invalid language selection. Choose from js, python, curl, php.' });
+        }
+
+        res.send(codeSnippet);
     } catch (error) {
-      res.status(500).json({ error: 'Failed to generate code snippet', details: error.message });
+        res.status(500).json({ error: 'Failed to generate code snippet', details: error.message });
     }
-  });
-  
-  
-  
-  // routes/api.js
-  router.get('/:botId/chat/:chatId/widget', async (req, res) => {
+});
+
+
+
+// routes/api.js
+router.get('/:botId/chat/:chatId/widget', async (req, res) => {
     const { botId, chatId } = req.params;
     const { apiKey } = req.query;
-  
+
     const widgetHTML = `
   <!DOCTYPE html>
   <html lang="en">
@@ -746,21 +788,21 @@ router.post('/', authMiddleware, async (req, res) => {
   </body>
   </html>
   `;
-  
+
     res.send(widgetHTML);
-  });
-  
-  
-  
-  router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) => {
+});
+
+
+
+router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) => {
     try {
-      const { botId, chatId } = req.params;
-      const { width = 400, height = 600 } = req.query;  // Allow custom width and height
-  
-      const apiKey = req.bot.apiKey;
-      const embedUrl = `http://localhost:5000/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}`;
-  
-      const embedCode = `
+        const { botId, chatId } = req.params;
+        const { width = 400, height = 600 } = req.query;  // Allow custom width and height
+
+        const apiKey = req.bot.apiKey;
+        const embedUrl = `http://localhost:5000/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}`;
+
+        const embedCode = `
   <iframe
     src="${embedUrl}"
     width="${width}"
@@ -771,11 +813,11 @@ router.post('/', authMiddleware, async (req, res) => {
     allowfullscreen="true">
   </iframe>
   `;
-  
-      res.json({ embedCode });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to generate embed code', details: error.message });
-    }
-  });
 
-  export default router;
+        res.json({ embedCode });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to generate embed code', details: error.message });
+    }
+});
+
+export default router;
