@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.js';  // .js extension is required
 import apiRoutes from './routes/api.js';
 import paymentRoutes from './routes/payment.js';
 import fs from 'fs';  // Use fs to read the JSON file
+import logging from './middleware/logger.js';
 
 dotenv.config();
 const app = express();
@@ -17,6 +18,9 @@ admin.initializeApp({
 
 // Use CORS middleware
 app.use(cors());  // This enables CORS for all routes by default
+
+//Logging
+app.use(logging);
 
 // Apply express.json() to all routes except for the webhook
 app.use((req, res, next) => {

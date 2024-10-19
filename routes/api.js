@@ -335,6 +335,69 @@ router.post(
   }
 );
 
+router.post('/bot', authMiddleware, async (req, res) => {
+  try {
+    const { botName, systemContext, modelName, kwargs } = req.body;
+
+    if (!botName || botName.trim() === '') {
+      return res.status(400).json({ error: 'Bot name is required' });
+    }
+
+    if (!systemContext) {
+      return res.status(400).json({ error: 'System context is required' });
+    }
+
+    const db = admin.firestore();
+    const botsRef = db.collection('bots');
+
+    // Generate a unique API key for the bot
+    const apiKey = generateApiKey();
+
+    // Create the bot document with botName
+    const botDocRef = await botsRef.add({
+      botName: botName.trim(), // store the bot's name
+      systemContext,
+      apiKey,
+      ownerUserId: req.user.uid,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      modelName: modelName || 'openai:gpt-3.5-turbo', // default model
+      kwargs: kwargs || {}, // optional model parameters
+    });
+
+    res.json({ botId: botDocRef.id, apiKey });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create bot', details: error.message });
+  }
+});
+
+
+
+router.post('/bot/:botId/chat/start', botApiKeyMiddleware, async (req, res) => {
+  try {
+    const { botId } = req.params;
+    const { name } = req.body;  // Optional chat name
+
+    // Ensure the botId matches the authenticated bot
+    if (botId !== req.bot.botId) {
+      return res.status(403).json({ error: 'Bot ID mismatch' });
+    }
+
+    const db = admin.firestore();
+    const chatsRef = db.collection('bots').doc(botId).collection('chats');
+
+    // Create a new chat session with a name (optional) and a creation timestamp
+    const chatDoc = await chatsRef.add({
+      name: name || 'Untitled Chat',  // Default to 'Untitled Chat' if no name provided
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.json({ chatId: chatDoc.id, name: name || 'Untitled Chat' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to start chat session', details: error.message });
+  }
+});
+
+
 
 router.get('/bot/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) => {
   try {
@@ -365,30 +428,6 @@ router.get('/bot/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, re
 
 // routes/api.js
 
-router.post('/bot/:botId/chat/start', botApiKeyMiddleware, async (req, res) => {
-  try {
-    const { botId } = req.params;
-    const { name } = req.body;  // Optional chat name
-
-    // Ensure the botId matches the authenticated bot
-    if (botId !== req.bot.botId) {
-      return res.status(403).json({ error: 'Bot ID mismatch' });
-    }
-
-    const db = admin.firestore();
-    const chatsRef = db.collection('bots').doc(botId).collection('chats');
-
-    // Create a new chat session with a name (optional) and a creation timestamp
-    const chatDoc = await chatsRef.add({
-      name: name || 'Untitled Chat',  // Default to 'Untitled Chat' if no name provided
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    res.json({ chatId: chatDoc.id, name: name || 'Untitled Chat' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to start chat session', details: error.message });
-  }
-});
 
 
 router.post('/bot/:botId/message', botApiKeyMiddleware, async (req, res) => {
