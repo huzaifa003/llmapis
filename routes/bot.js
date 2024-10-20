@@ -217,7 +217,7 @@ router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) =
         const { width = 400, height = 600 } = req.query;  // Allow custom width and height
 
         const apiKey = req.bot.apiKey;
-        const embedUrl = `http://localhost:5000/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}`;
+        const embedUrl = `http://localhost:5000/api/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}`;
 
         const embedCode = `
   <iframe
