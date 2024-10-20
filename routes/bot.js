@@ -503,7 +503,8 @@ router.post('/:botId/chat/:chatId/stream', botApiKeyMiddleware, async (req, res)
 
 
   } catch (error) {
-    res.status(500).json({ error: 'Failed to process message', details: error.message });
+    res.write({ error: 'Failed to process message', details: error.message });
+    res.end();
   }
 });
 
