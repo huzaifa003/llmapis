@@ -213,11 +213,11 @@ router.post('/:botId/chat/start', botApiKeyMiddleware, async (req, res) => {
 
 router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) => {
   try {
-    const { botId, chatId } = req.params;
+    const { botId, chatId, modelName } = req.params;
     const { width = 400, height = 600 } = req.query;  // Allow custom width and height
 
     const apiKey = req.bot.apiKey;
-    const embedUrl = `http://localhost:5000/api/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}`;
+    const embedUrl = `http://localhost:5000/api/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}&modelName=${modelName}`;
 
     const embedCode = `
   <iframe
@@ -735,9 +735,9 @@ var_dump($result);
 
 
 
-router.get('/:botId/chat/:chatId/widget/:modelName', async (req, res) => {
-  const { botId, chatId, modelName } = req.params;
-  // const { apiKey, modelName } = req.query; // Assume modelName is passed in the query string
+router.get('/:botId/chat/:chatId/widget', async (req, res) => {
+  const { botId, chatId } = req.params;
+  const { apiKey, modelName } = req.query; // Assume modelName is passed in the query string
 
   const widgetHTML = `
 <!DOCTYPE html>
@@ -944,7 +944,7 @@ router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) =
     const { width = 400, height = 600 } = req.query;  // Allow custom width and height
 
     const apiKey = req.bot.apiKey;
-    const embedUrl = `http://localhost:5000/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}`;
+    const embedUrl = `http://localhost:5000/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}&?`;
 
     const embedCode = `
   <iframe
