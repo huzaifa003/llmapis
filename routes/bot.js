@@ -584,7 +584,7 @@ router.post('/:botId/chat/:chatId/image', botApiKeyMiddleware, async (req, res) 
     }
 });
 
-router.post('/get_images', authMiddleware, async (req, res) => {
+router.post('/get_images', botApiKeyMiddleware, async (req, res) => {
     try {
         fetchImg(req.body.request_id).then((response) => {
             let resp = { ...response, type: "image" }
