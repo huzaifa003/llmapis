@@ -243,10 +243,10 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"modelName\": \"gemini:gemini-1.5-flash-002\",\n    \"message\": \"Now of Huckleberry Finn\"\n}"
+					"raw": "{\n    \"modelName\": \"mixtral:mixtral-8x7b-32768\",\n    \"message\": \"who developed you?\"\n}"
 				},
 				"url": {
-					"raw": "http://localhost:5000/api/stream/{{chatId}}",
+					"raw": "http://localhost:5000/api/chat/stream/{{chatId}}",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -254,6 +254,7 @@
 					"port": "5000",
 					"path": [
 						"api",
+						"chat",
 						"stream",
 						"{{chatId}}"
 					]
@@ -531,7 +532,7 @@
 					}
 				],
 				"url": {
-					"raw": "http://localhost:5000/api/get-models?model_type=chat",
+					"raw": "http://localhost:5000/api/model/get-models?model_type=chat",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -539,6 +540,7 @@
 					"port": "5000",
 					"path": [
 						"api",
+						"model",
 						"get-models"
 					],
 					"query": [
@@ -558,7 +560,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n  \"plan\": \"premium\",\r\n  \"userId\": \"NB3uZRygBMhLkxoAU0QQEzLc8lO2\"\r\n}\r\n",
+					"raw": "{\r\n  \"plan\": \"premium\",\r\n  \"userId\": \"Mab6ZFiGqzLW4L1OUZILortH0Qt2\"\r\n}\r\n",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -662,6 +664,66 @@
 			"response": []
 		},
 		{
+			"name": "Edit Bot",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"botName\": \"Updated Bot Name\",\n    \"systemContext\": \"You are a more helpful assistant now.\",\n    \"modelName\": \"openai:gpt-4\",\n    \"kwargs\": {}\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/bot/{{botId}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"bot",
+						"{{botId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Bot",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/bot/{{botId}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"bot",
+						"{{botId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
 			"name": "Get All Plans",
 			"request": {
 				"method": "GET",
@@ -682,85 +744,13 @@
 			"response": []
 		},
 		{
-			"name": "Bot Generation",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Authorization",
-						"value": "Bearer {{idToken}}",
-						"type": "text"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"systemContext\": \"You are a helpful assistant named Eliza\",\n  \"modelName\": \"gemini:gemini-1.5-flash-002\",\n  \"kwargs\": {\n    \"maxTokens\": 500\n  }\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "http://localhost:5000/api/bot",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "5000",
-					"path": [
-						"api",
-						"bot"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Streaming Message to Bot",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "x-api-key",
-						"value": "b95bde42-edd1-4cdd-9fc5-4806a98e2479",
-						"type": "text"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"messages\": [\n    {\n      \"role\": \"assistant\",\n      \"content\": \"My Name is Mahrukh\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"can you list all your names?\"\n    }\n  ]\n}\n",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "http://localhost:5000/api/bot/{{botId}}/stream",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "5000",
-					"path": [
-						"api",
-						"bot",
-						"{{botId}}",
-						"stream"
-					]
-				}
-			},
-			"response": []
-		},
-		{
 			"name": "Bot Get Code",
 			"request": {
 				"method": "GET",
 				"header": [
 					{
 						"key": "x-api-key",
-						"value": "b95bde42-edd1-4cdd-9fc5-4806a98e2479",
+						"value": "69a24975-1be4-4ff6-a56e-dae642f8218a",
 						"type": "text"
 					}
 				],
@@ -783,18 +773,27 @@
 			"response": []
 		},
 		{
-			"name": "Get Embed Bot",
+			"name": "Create Bot",
 			"request": {
-				"method": "GET",
+				"method": "POST",
 				"header": [
 					{
-						"key": "x-api-key",
-						"value": "b95bde42-edd1-4cdd-9fc5-4806a98e2479",
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
 						"type": "text"
 					}
 				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"botName\": \"My Trial Bot with Modualrization and Groq\",\n  \"systemContext\": \"You are a helpful assistant, and your name is Melissa\",\n  \"modelName\": \"mixtral:mixtral-8x7b-32768\"\n}"
+				},
 				"url": {
-					"raw": "http://localhost:5000/api/bot/{{botId}}/embed",
+					"raw": "http://localhost:5000/api/bot",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -802,36 +801,39 @@
 					"port": "5000",
 					"path": [
 						"api",
-						"bot",
-						"{{botId}}",
-						"embed"
+						"bot"
 					]
 				}
 			},
 			"response": []
 		},
 		{
-			"name": "Generate Image From Bot",
+			"name": "Start New Chat Session",
 			"request": {
 				"method": "POST",
 				"header": [
 					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
 						"key": "x-api-key",
-						"value": "25f74712-8de6-4f17-bacf-7b651b2bf177",
+						"value": "{{botApiKey}}",
 						"type": "text"
 					}
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"message\": \"Generate a video of Titanic?\"\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
+					"raw": "{\n  \"name\": \"Chat with Bot Melissa\"\n}"
 				},
 				"url": {
-					"raw": "http://localhost:5000/api/bot/{{botId}}/image",
+					"raw": "http://localhost:5000/api/bot/{{botId}}/chat/start",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -841,7 +843,259 @@
 						"api",
 						"bot",
 						"{{botId}}",
+						"chat",
+						"start"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Send Message to Chat",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{botApiKey}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"message\": \"Hello, how are you?\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/bot/{{botId}}/chat/<chatId>/message",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"bot",
+						"{{botId}}",
+						"chat",
+						"<chatId>",
+						"message"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Stream Message to Chat",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{botApiKey}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"messages\": [\n    { \"role\": \"assistant\", \"content\": \"The weather is sunny today\" },\n    { \"role\": \"user\", \"content\": \"Who developed you?\" }\n  ]\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/bot/{{botId}}/chat/{{chatId}}/stream",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"bot",
+						"{{botId}}",
+						"chat",
+						"{{chatId}}",
+						"stream"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Generate Image in Chat",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "<your-bot-api-key>",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"message\": \"Generate a picture of a sunset\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/bot/{{botId}}/chat/{{chatId}}/image",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"bot",
+						"{{botId}}",
+						"chat",
+						"{{chatId}}",
 						"image"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get All Bots",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{botApiKey}}",
+						"type": "text",
+						"disabled": true
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/bot/get-all-bots",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"bot",
+						"get-all-bots"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get All Chats of a Bot",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{botApiKey}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/bot/{{botId}}/chats",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"bot",
+						"{{botId}}",
+						"chats"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Chats of Bots",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{botApiKey}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{idToken}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/bot/{{botId}}/chat/{{chatId}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"bot",
+						"{{botId}}",
+						"chat",
+						"{{chatId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Embed Bot Widget",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{botApiKey}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/bot/{{botId}}/chat/{{chatId}}/embed?width=400&height=600",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"bot",
+						"{{botId}}",
+						"chat",
+						"{{chatId}}",
+						"embed"
+					],
+					"query": [
+						{
+							"key": "width",
+							"value": "400"
+						},
+						{
+							"key": "height",
+							"value": "600"
+						}
 					]
 				}
 			},
@@ -878,7 +1132,7 @@
 		},
 		{
 			"key": "idToken",
-			"value": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjcxOGY0ZGY5MmFkMTc1ZjZhMDMwN2FiNjVkOGY2N2YwNTRmYTFlNWYiLCJ0eXAiOiJKV1QifQ.eyJzdWJzY3JpcHRpb25UaWVyIjoiZnJlZSIsImlzcyI6Imh0dHBzOi8vc2VjdXJldG9rZW4uZ29vZ2xlLmNvbS9sbG1zLWQ2YjViIiwiYXVkIjoibGxtcy1kNmI1YiIsImF1dGhfdGltZSI6MTcyOTI5MTI2NSwidXNlcl9pZCI6Ik1hYjZaRmlHcXpMVzRMMU9VWklMb3J0SDBRdDIiLCJzdWIiOiJNYWI2WkZpR3F6TFc0TDFPVVpJTG9ydEgwUXQyIiwiaWF0IjoxNzI5MjkxMjY1LCJleHAiOjE3MjkyOTQ4NjUsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJlbWFpbCI6WyJ0ZXN0QGV4YW1wbGUuY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoicGFzc3dvcmQifX0.28abtxR8Aur1eFzFUJGBP42DOjaZxRMnBBuLqT9Ha2EkFCBNQA5ESRjd7Tbx4rcPWXs9bKHc9trK_wB_LMd9vcm5NHSKrFYBwhvuE4MhdMkOI9qJUroN8g00_L3J1b-3tlzgcW6B3DW3kwVXUGqk3AOOPcXIJ-fNE9L-CjnFmkj5chJo48bi9ofXN4zDgPNRnBUdD0TyQ5txdMOBFDUBi-d6VBd5af4uWS6ahPRduet69oeXoWzxqEcRYDxyGHMK0PrNc8YmzYCiduZYpHCZWqVwLoiRdevZs0HCtiTtPl9kefbzarWCHIuz4NwceI19TDDyETwfCr2Y2LBai-occw",
+			"value": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjcxOGY0ZGY5MmFkMTc1ZjZhMDMwN2FiNjVkOGY2N2YwNTRmYTFlNWYiLCJ0eXAiOiJKV1QifQ.eyJzdWJzY3JpcHRpb25UaWVyIjoiZnJlZSIsImlzcyI6Imh0dHBzOi8vc2VjdXJldG9rZW4uZ29vZ2xlLmNvbS9sbG1zLWQ2YjViIiwiYXVkIjoibGxtcy1kNmI1YiIsImF1dGhfdGltZSI6MTcyOTMzMTI4NiwidXNlcl9pZCI6Ik1hYjZaRmlHcXpMVzRMMU9VWklMb3J0SDBRdDIiLCJzdWIiOiJNYWI2WkZpR3F6TFc0TDFPVVpJTG9ydEgwUXQyIiwiaWF0IjoxNzI5MzMxMjg2LCJleHAiOjE3MjkzMzQ4ODYsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJlbWFpbCI6WyJ0ZXN0QGV4YW1wbGUuY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoicGFzc3dvcmQifX0.EMTqNpsQcMkZ5lFJbkVOKN7SRkTexShcRObOv9MFcPIjV7LTFK1y2Im2qphjNdHm3XrUBPJKbAomhHOfC2GDZ4SsPvbKeg6plkIic-0Ir-Mm5orL7iTrDb4R43s_kqvXeZ3Eh_RwRjPcqP0xVhnT8IdOpvI4D8l40MHdiaiGJFAo0CNpVR3cHWkA_k3bLCuvzgE9Tki42dYWi4RCX0O90WtOLaszXSxoQZ2W_ri5e5lKef206az65v2p_NUQ2GHlY6fPwtnLpUYYul4SFNIFIPtTs0YbopBGORFiG4Bslq6h_MpnPuKhNGuWn48mk4pKY5EY308S3LjNivSv3CEt7g",
 			"type": "string"
 		},
 		{
@@ -888,12 +1142,12 @@
 		},
 		{
 			"key": "botId",
-			"value": "SotklFzeiTR9yujO3VC7",
+			"value": "K7CNTXuxiw9fTsCj1VUj",
 			"type": "string"
 		},
 		{
 			"key": "botApiKey",
-			"value": "b95bde42-edd1-4cdd-9fc5-4806a98e2479",
+			"value": "f5eca71a-bf58-4711-9dc9-22b46790ac45",
 			"type": "string"
 		}
 	]

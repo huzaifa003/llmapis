@@ -110,6 +110,79 @@ router.delete('/:botId', authMiddleware, async (req, res) => {
 });
 
 
+router.get('/:botId/chats', botApiKeyMiddleware, async (req, res) => {
+    try {
+      const { botId } = req.params;
+  
+      // Ensure the botId matches the authenticated bot
+      if (botId !== req.bot.botId) {
+        return res.status(403).json({ error: 'Bot ID mismatch' });
+      }
+  
+      const db = admin.firestore();
+      const chatsRef = db.collection('bots').doc(botId).collection('chats');
+  
+      // Retrieve all chats for the specified bot
+      const chatsSnapshot = await chatsRef.get();
+      const chats = chatsSnapshot.docs.map((doc) => ({
+        chatId: doc.id,
+        ...doc.data(),
+      }));
+  
+      if (chats.length === 0) {
+        return res.status(404).json({ message: 'No chats found for this bot.' });
+      }
+  
+      res.json({ chats });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to retrieve chats.', details: err.message });
+    }
+  });
+
+  
+
+
+router.get('/:botId/chat/:chatId', botApiKeyMiddleware, async (req, res) => {
+    try {
+      const { botId, chatId } = req.params;
+  
+      // Ensure the botId matches the authenticated bot
+      if (botId !== req.bot.botId) {
+        return res.status(403).json({ error: 'Bot ID mismatch' });
+      }
+      
+      const db = admin.firestore();
+      const messagesRef = db
+        .collection('bots')
+        .doc(botId)
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages');
+    
+        console.log(botId);
+        console.log(chatId);
+  
+      // Retrieve messages from Firestore
+      
+      const messagesSnapshot = await messagesRef.orderBy('timestamp').get();
+      const messages = messagesSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      
+  
+      if (messages.length === 0) {
+        return res.status(404).json({ message: 'No messages found for this chat.' });
+      }
+  
+      res.json({ messages });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to retrieve chat messages.', details: err.message });
+    }
+  });
+
+  
 
 router.post('/:botId/chat/start', botApiKeyMiddleware, async (req, res) => {
     try {
@@ -883,23 +956,28 @@ router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) =
 });
 
 
-router.get("/get-all-bots",authMiddleware, async (req, res) => {
-    try {
-        const db = admin.firestore();
-        const botsRef = db.collection('bots');
-        const bots = await botsRef.get().then((querySnapshot) => {
-            const bots = [];
-            querySnapshot.forEach((doc) => {
-                bots.push({
-                    id: doc.id,
-                    ...doc.data(),
-                });
-            });
-            res.send(bots);
-        });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to retrieve all bots', details: error.message });
+router.get("/get-all-bots", authMiddleware, async (req, res) => {
+  try {
+    const db = admin.firestore();
+    const botsRef = db.collection('bots');
+
+    // Query for bots that belong to the logged-in user (user's UID is in req.user.uid)
+    const userBotsSnapshot = await botsRef.where('ownerUserId', '==', req.user.uid).get();
+
+    if (userBotsSnapshot.empty) {
+      return res.status(404).json({ message: 'No bots found for this user' });
     }
-})
+
+    const bots = userBotsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    res.json(bots);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve bots for the user', details: error.message });
+  }
+});
+
 
 export default router;
