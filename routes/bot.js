@@ -213,8 +213,8 @@ router.post('/:botId/chat/start', botApiKeyMiddleware, async (req, res) => {
 
 router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) => {
   try {
-    const { botId, chatId, modelName } = req.params;
-    const { width = 400, height = 600 } = req.query;  // Allow custom width and height
+    const { botId, chatId } = req.params;
+    const { width = 400, height = 600, modelName = 'openai:gpt-3.5-turbo' } = req.query;  // Allow custom width and height
 
     const apiKey = req.bot.apiKey;
     const embedUrl = `http://localhost:5000/api/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}&modelName=${modelName}`;
@@ -938,31 +938,31 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
 
 
 
-router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) => {
-  try {
-    const { botId, chatId } = req.params;
-    const { width = 400, height = 600 } = req.query;  // Allow custom width and height
+// router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) => {
+//   try {
+//     const { botId, chatId } = req.params;
+//     const { width = 400, height = 600 } = req.query;  // Allow custom width and height
 
-    const apiKey = req.bot.apiKey;
-    const embedUrl = `http://localhost:5000/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}&?`;
+//     const apiKey = req.bot.apiKey;
+//     const embedUrl = `http://localhost:5000/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}&?`;
 
-    const embedCode = `
-  <iframe
-    src="${embedUrl}"
-    width="${width}"
-    height="${height}"
-    style="border:none; overflow:hidden"
-    scrolling="no"
-    frameborder="0"
-    allowfullscreen="true">
-  </iframe>
-  `;
+//     const embedCode = `
+//   <iframe
+//     src="${embedUrl}"
+//     width="${width}"
+//     height="${height}"
+//     style="border:none; overflow:hidden"
+//     scrolling="no"
+//     frameborder="0"
+//     allowfullscreen="true">
+//   </iframe>
+//   `;
 
-    res.json({ embedCode });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to generate embed code', details: error.message });
-  }
-});
+//     res.json({ embedCode });
+//   } catch (error) {
+//     res.status(500).json({ error: 'Failed to generate embed code', details: error.message });
+//   }
+// });
 
 
 router.get("/get-all-bots", authMiddleware, async (req, res) => {
