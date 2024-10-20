@@ -735,9 +735,9 @@ var_dump($result);
 
 
 
-router.get('/:botId/chat/:chatId/widget', async (req, res) => {
-  const { botId, chatId } = req.params;
-  const { apiKey, modelName } = req.query; // Assume modelName is passed in the query string
+router.get('/:botId/chat/:chatId/widget/:modelName', async (req, res) => {
+  const { botId, chatId, modelName } = req.params;
+  // const { apiKey, modelName } = req.query; // Assume modelName is passed in the query string
 
   const widgetHTML = `
 <!DOCTYPE html>
