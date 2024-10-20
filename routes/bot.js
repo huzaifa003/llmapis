@@ -605,9 +605,9 @@ router.post('/get_images', authMiddleware, async (req, res) => {
 })
 
 
-router.get('/:botId/code-snippet/:language', botApiKeyMiddleware, async (req, res) => {
+router.get('/:botId/chat/:chatId/code-snippet/:language', botApiKeyMiddleware, async (req, res) => {
     try {
-        const { botId, language } = req.params;
+        const { botId, chatId, language } = req.params;
 
         // Ensure the botId matches the authenticated bot
         if (botId !== req.bot.botId) {
@@ -615,92 +615,95 @@ router.get('/:botId/code-snippet/:language', botApiKeyMiddleware, async (req, re
         }
 
         const apiKey = req.bot.apiKey;  // Assuming the botApiKeyMiddleware adds apiKey to req.bot
-        const endpoint = `http://localhost:5000/bot/${botId}/stream`;
+        const endpoint = `http://localhost:5000/api/bot/${botId}/chat/${chatId}/stream`;
 
         // JavaScript (Node.js) example
         const jsCode = `
-  const axios = require('axios');
-  
-  const API_KEY = '${apiKey}';
-  const BOT_ID = '${botId}';
-  const URL = '${endpoint}';
-  
-  async function sendMessage(messages) {
-    const response = await axios.post(URL, { messages }, {
-      headers: { 'x-api-key': API_KEY }
-    });
-    console.log(response.data);
-  }
-  
-  const messages = [
-    { role: 'user', content: 'Hello, how are you?' },
-    { role: 'user', content: 'Tell me a joke!' }
-  ];
-  
-  sendMessage(messages);
-  `;
+const axios = require('axios');
+
+const API_KEY = '${apiKey}';
+const BOT_ID = '${botId}';
+const CHAT_ID = '${chatId}';
+const URL = '${endpoint}';
+
+async function sendMessage(messages) {
+  const response = await axios.post(URL, { messages }, {
+    headers: { 'x-api-key': API_KEY }
+  });
+  console.log(response.data);
+}
+
+const messages = [
+  { role: 'user', content: 'Hello, how are you?' },
+  { role: 'user', content: 'Tell me a joke!' }
+];
+
+sendMessage(messages);
+`;
 
         // Python example
         const pythonCode = `
-  import requests
-  
-  API_KEY = '${apiKey}'
-  BOT_ID = '${botId}'
-  URL = '${endpoint}'
-  
-  def send_message(messages):
-      headers = { 'x-api-key': API_KEY }
-      response = requests.post(URL, json={'messages': messages}, headers=headers)
-      print(response.json())
-  
-  messages = [
-      {'role': 'user', 'content': 'Hello, how are you?'},
-      {'role': 'user', 'content': 'Tell me a joke!'}
-  ]
-  
-  send_message(messages)
-  `;
+import requests
+
+API_KEY = '${apiKey}'
+BOT_ID = '${botId}'
+CHAT_ID = '${chatId}'
+URL = '${endpoint}'
+
+def send_message(messages):
+    headers = { 'x-api-key': API_KEY }
+    response = requests.post(URL, json={'messages': messages}, headers=headers)
+    print(response.json())
+
+messages = [
+    {'role': 'user', 'content': 'Hello, how are you?'},
+    {'role': 'user', 'content': 'Tell me a joke!'}
+]
+
+send_message(messages)
+`;
 
         // cURL example
         const curlCode = `
-  curl -X POST ${endpoint} \\
-  -H "x-api-key: ${apiKey}" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "messages": [
-      { "role": "user", "content": "Hello, how are you?" },
-      { "role": "user", "content": "Tell me a joke!" }
-    ]
-  }'
-  `;
+curl -X POST ${endpoint} \\
+-H "x-api-key: ${apiKey}" \\
+-H "Content-Type: application/json" \\
+-d '{
+  "messages": [
+    { "role": "user", "content": "Hello, how are you?" },
+    { "role": "user", "content": "Tell me a joke!" }
+  ]
+}'
+`;
 
         // PHP example
         const phpCode = `
-  <?php
-  $apiKey = '${apiKey}';
-  $botId = '${botId}';
-  $url = '${endpoint}';
-  
-  $messages = [
-      ["role" => "user", "content" => "Hello, how are you?"],
-      ["role" => "user", "content" => "Tell me a joke!"]
-  ];
-  
-  $options = [
-      'http' => [
-          'header'  => "Content-type: application/json\\r\\n" .
-                       "x-api-key: $apiKey\\r\\n",
-          'method'  => 'POST',
-          'content' => json_encode(['messages' => $messages]),
-      ],
-  ];
-  $context  = stream_context_create($options);
-  $result = file_get_contents($url, false, $context);
-  if ($result === FALSE) { /* Handle error */ }
-  
-  var_dump($result);
-  ?>
-  `;
+<?php
+$apiKey = '${apiKey}';
+$botId = '${botId}';
+$chatId = '${chatId}';
+$url = '${endpoint}';
+
+$messages = [
+    ["role" => "user", "content" => "Hello, how are you?"],
+    ["role" => "user", "content" => "Tell me a joke!"]
+];
+
+$options = [
+    'http' => [
+        'header'  => "Content-type: application/json\\r\\n" .
+                     "x-api-key: $apiKey\\r\\n",
+        'method'  => 'POST',
+        'content' => json_encode(['messages' => $messages]),
+    ],
+];
+$context  = stream_context_create($options);
+$result = file_get_contents($url, false, $context);
+if ($result === FALSE) { /* Handle error */ }
+
+var_dump($result);
+?>
+`;
 
         let codeSnippet = '';
 
@@ -728,6 +731,7 @@ router.get('/:botId/code-snippet/:language', botApiKeyMiddleware, async (req, re
         res.status(500).json({ error: 'Failed to generate code snippet', details: error.message });
     }
 });
+
 
 
 
