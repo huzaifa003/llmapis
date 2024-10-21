@@ -217,7 +217,8 @@ router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) =
     const { width = 400, height = 600, modelName = 'openai:gpt-3.5-turbo' } = req.query;  // Allow custom width and height
 
     const apiKey = req.bot.apiKey;
-    const embedUrl = `http://localhost:5000/api/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}&modelName=${modelName}`;
+    const embedUrl = `${BACKEND_URL}/api/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}&modelName=${modelName}`;
+console.log("embeded",embedUrl);
 
     const embedCode = `
   <iframe
@@ -616,7 +617,7 @@ router.get('/:botId/chat/:chatId/code-snippet/:language', botApiKeyMiddleware, a
     }
 
     const apiKey = req.bot.apiKey;  // Assuming the botApiKeyMiddleware adds apiKey to req.bot
-    const endpoint = `http://localhost:5000/api/bot/${botId}/chat/${chatId}/stream`;
+    const endpoint = `${BACKEND_URL}/api/bot/${botId}/chat/${chatId}/stream`;
 
     // JavaScript (Node.js) example
     const jsCode = `
