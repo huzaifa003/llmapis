@@ -930,8 +930,8 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
     let streamingBubble = null;
 
     const apiUrl = modelName.startsWith('imagegen:')
-      ? 'http://localhost:5000/api/bot/' + botId + '/chat/' + chatId + '/image'
-      : 'http://localhost:5000/api/bot/' + botId + '/chat/' + chatId + '/stream';
+      ? '${process.env.BACKEND_URL}/api/bot/' + botId + '/chat/' + chatId + '/image'
+      : '${process.env.BACKEND_URL}/api/bot/' + botId + '/chat/' + chatId + '/stream';
 
     chatInput.addEventListener('input', function() {
       sendButton.disabled = chatInput.value.trim() === '';
@@ -965,7 +965,7 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
     }
 
     async function pollForImage(imageId) {
-      const imageApiUrl = 'http://localhost:5000/api/bot/get_images';
+      const imageApiUrl = '${process.env.BACKEND_URL}/api/bot/get_images';
       let imageGenerated = false;
 
       // Show loading spinner before starting to poll for the image
