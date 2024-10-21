@@ -3,9 +3,12 @@ import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import cors from 'cors';  // Import cors
 import authRoutes from './routes/auth.js';  // .js extension is required
-import apiRoutes from './routes/api.js';
+import botRoutes from './routes/bot.js'
+import chatRoutes from './routes/chat.js'
 import paymentRoutes from './routes/payment.js';
+import modelRoutes from './routes/model.js'
 import fs from 'fs';  // Use fs to read the JSON file
+import logging from './middleware/logger.js';
 
 dotenv.config();
 const app = express();
@@ -18,6 +21,9 @@ admin.initializeApp({
 // Use CORS middleware
 app.use(cors());  // This enables CORS for all routes by default
 
+//Logging for debugging
+// app.use(logging);
+
 // Apply express.json() to all routes except for the webhook
 app.use((req, res, next) => {
     if (req.originalUrl === '/payments/webhook') {
@@ -28,7 +34,9 @@ app.use((req, res, next) => {
   });
 
 app.use('/auth', authRoutes);
-app.use('/api', apiRoutes);
+app.use('/api/bot', botRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/model', modelRoutes);
 app.use('/payments', paymentRoutes);
 
 
