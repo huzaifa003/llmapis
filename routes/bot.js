@@ -734,292 +734,344 @@ var_dump($result);
 });
 
 
-
 router.get('/:botId/chat/:chatId/widget', async (req, res) => {
     const { botId, chatId } = req.params;
     const { apiKey, modelName } = req.query;
-  
+
     const widgetHTML = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Chatbot Widget</title>
-      <style>
-        body {
-          margin: 0;
-          padding: 0;
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          background-color: #f4f4f4;
-        }
-  
-        .chat-container {
-          width: 100vw;
-          height: 100vh;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          background-color: #e9ecef;
-        }
-  
-        .chat-widget {
-          width: 400px;
-          height: 550px;
-          background-color: #fff;
-          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-          display: flex;
-          flex-direction: column;
-          border-radius: 12px;
-          overflow: hidden;
-          border: 1px solid #ddd;
-        }
-  
-        .chat-box {
-          flex: 1;
-          padding: 15px;
-          overflow-y: auto;
-          background-color: #fafafa;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-  
-        .chat-bubble {
-          max-width: 75%;
-          padding: 12px 18px;
-          border-radius: 20px;
-          font-size: 15px;
-          line-height: 1.5;
-          word-wrap: break-word;
-        }
-  
-        .chat-bubble.user {
-          background-color: #007bff;
-          color: white;
-          align-self: flex-end;
-          border-bottom-right-radius: 5px;
-          text-align: right;
-        }
-  
-        .chat-bubble.bot {
-          background-color: #f1f1f1;
-          color: #333;
-          align-self: flex-start;
-          border-bottom-left-radius: 5px;
-          text-align: left;
-        }
-  
-        .chat-input-container {
-          display: flex;
-          padding: 15px;
-          border-top: 1px solid #ddd;
-          background-color: #fff;
-          align-items: center;
-          gap: 10px;
-        }
-  
-        .chat-input {
-          flex: 1;
-          padding: 12px 15px;
-          border: 1px solid #ddd;
-          border-radius: 25px;
-          font-size: 15px;
-          outline: none;
-        }
-  
-        .chat-input:focus {
-          border-color: #007bff;
-        }
-  
-        .send-button {
-          padding: 10px 20px;
-          background-color: #007bff;
-          border: none;
-          border-radius: 25px;
-          color: white;
-          font-size: 15px;
-          cursor: pointer;
-          transition: background-color 0.2s ease;
-        }
-  
-        .send-button:disabled {
-          background-color: #aaa;
-        }
-  
-        .send-button:hover:not(:disabled) {
-          background-color: #0056b3;
-        }
-  
-        .chat-box::-webkit-scrollbar {
-          width: 8px;
-        }
-  
-        .chat-box::-webkit-scrollbar-thumb {
-          background-color: rgba(0, 0, 0, 0.3);
-          border-radius: 10px;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="chat-container">
-        <div class="chat-widget">
-          <div id="chat-box" class="chat-box"></div>
-          <div class="chat-input-container">
-            <input type="text" id="chat-input" class="chat-input" placeholder="Type a message..." />
-            <button id="send-button" class="send-button" disabled>Send</button>
-          </div>
-        </div>
+   <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatbot Widget</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Poppins', sans-serif;
+      background-color: #f0f0f0;
+    }
+
+    .chat-container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #e9ecef;
+    }
+
+    .chat-widget {
+      width: 400px;
+      height: 550px;
+      background-color: #fff;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      border-radius: 15px;
+      overflow: hidden;
+      border: 1px solid #ddd;
+    }
+
+    .chat-box {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      background-color: #f9f9f9;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .message-wrapper {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .message-wrapper.user {
+      justify-content: flex-end;
+    }
+
+    .message-wrapper.bot {
+      justify-content: flex-start;
+    }
+
+    .avatar {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      margin-right: 15px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      display:none
+    }
+
+    .message-bubble {
+      max-width: 70%;
+      padding: 15px 20px;
+      border-radius: 25px;
+      font-size: 16px;
+      line-height: 1.6;
+      word-wrap: break-word;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .message-bubble.user {
+      background-color: #007bff;
+      color: white;
+      border-bottom-right-radius: 5px;
+      margin-left: 10px;
+    }
+
+    .message-bubble.bot {
+      background-color: #f1f1f1;
+      color: #333;
+      border-bottom-left-radius: 5px;
+    }
+
+    .chat-input-container {
+      display: flex;
+      padding: 15px;
+      border-top: 1px solid #ddd;
+      background-color: #fff;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 12px 15px;
+      border: 1px solid #ddd;
+      border-radius: 30px;
+      font-size: 16px;
+      outline: none;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .chat-input:focus {
+      border-color: #007bff;
+    }
+
+    .send-button {
+      padding: 10px 25px;
+      background-color: #007bff;
+      border: none;
+      border-radius: 25px;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .send-button:disabled {
+      background-color: #aaa;
+    }
+
+    .send-button:hover:not(:disabled) {
+      background-color: #0056b3;
+    }
+
+    .loading-spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007bff;
+      border-radius: 50%;
+      width: 25px;
+      height: 25px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .chat-box::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .chat-box::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-widget">
+      <div id="chat-box" class="chat-box"></div>
+      <div class="chat-input-container">
+        <input type="text" id="chat-input" class="chat-input" placeholder="Type a message..." />
+        <button id="send-button" class="send-button" disabled>Send</button>
       </div>
-  
-      <script>
-        const chatBox = document.getElementById('chat-box');
-        const chatInput = document.getElementById('chat-input');
-        const sendButton = document.getElementById('send-button');
-        const apiKey = '${apiKey}';
-        const botId = '${botId}';
-        const chatId = '${chatId}';
-        const modelName = '${modelName}';
-  
-        let conversationHistory = []; // Store the conversation context
-        let streamingBubble = null; // To hold the bubble for streaming content
-  
-        // Determine the correct API endpoint based on the model name
-        const apiUrl = modelName.startsWith('imagegen:')
-          ? 'http://localhost:5000/api/bot/' + botId + '/chat/' + chatId + '/image'
-          : 'http://localhost:5000/api/bot/' + botId + '/chat/' + chatId + '/stream';
-  
-        chatInput.addEventListener('input', function() {
-          sendButton.disabled = chatInput.value.trim() === '';
+    </div>
+  </div>
+
+  <script>
+    const chatBox = document.getElementById('chat-box');
+    const chatInput = document.getElementById('chat-input');
+    const sendButton = document.getElementById('send-button');
+    const apiKey = '${apiKey}';
+    const botId = '${botId}';
+    const chatId = '${chatId}';
+    const modelName = '${modelName}';
+
+    let conversationHistory = [];
+    let streamingBubble = null;
+
+    const apiUrl = modelName.startsWith('imagegen:')
+      ? 'http://localhost:5000/api/bot/' + botId + '/chat/' + chatId + '/image'
+      : 'http://localhost:5000/api/bot/' + botId + '/chat/' + chatId + '/stream';
+
+    chatInput.addEventListener('input', function() {
+      sendButton.disabled = chatInput.value.trim() === '';
+    });
+
+    function appendMessage(content, className, avatarUrl, isStreaming = false) {
+      if (isStreaming && streamingBubble) {
+        streamingBubble.innerHTML += content;
+      } else {
+        const messageWrapper = document.createElement('div');
+        messageWrapper.classList.add('message-wrapper', className, 'fade-in');
+
+        const avatar = document.createElement('img');
+        avatar.classList.add('avatar');
+        avatar.src = avatarUrl;
+
+        const messageBubble = document.createElement('div');
+        messageBubble.classList.add('message-bubble', className);
+
+        if (isStreaming) {
+          streamingBubble = messageBubble;
+        }
+
+        messageBubble.innerHTML = content;
+
+        messageWrapper.appendChild(avatar);
+        messageWrapper.appendChild(messageBubble);
+        chatBox.appendChild(messageWrapper);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+    }
+
+    async function pollForImage(imageId) {
+      const imageApiUrl = 'http://localhost:5000/api/bot/get_images';
+      let imageGenerated = false;
+
+      // Show loading spinner before starting to poll for the image
+  const loadingSpinnerHtml = '<div class="loading-spinner"></div>';
+  appendMessage(loadingSpinnerHtml, 'bot', 'bot-avatar.png');
+
+      while (!imageGenerated) {
+        const response = await fetch(imageApiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey
+          },
+          body: JSON.stringify({ request_id: imageId })
         });
-  
-        function appendMessage(content, className, isStreaming = false) {
-          if (isStreaming && streamingBubble) {
-            // If we're streaming, append to the existing bubble
-            streamingBubble.innerHTML += content;
-          } else {
-            // Otherwise, create a new bubble
-            const bubble = document.createElement('div');
-            bubble.classList.add('chat-bubble', className);
-  
-            if (isStreaming) {
-              streamingBubble = bubble;  // Set bubble to be updated during streaming
-            }
-  
-            bubble.innerHTML = content;
-            chatBox.appendChild(bubble);
-            chatBox.scrollTop = chatBox.scrollHeight;
+
+        if (response.ok) {
+          const imageData = await response.json();
+          if (imageData.status === 'success') {
+            const imageWrapper = chatBox.querySelector('.loading-spinner').parentNode;
+            imageWrapper.innerHTML = '<img src="' + imageData.output[0] + '" alt="Generated Image" width="200"/>';
+            imageGenerated = true;
           }
         }
-  
-        // Polling function to keep checking for image generation completion
-        async function pollForImage(imageId) {
-          const imageApiUrl = 'http://localhost:5000/api/bot/get_images';
-          let imageGenerated = false;
-  
-          while (!imageGenerated) {
-            const response = await fetch(imageApiUrl, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey
-              },
-              body: JSON.stringify({ request_id: imageId })
-            });
-  
-            if (response.ok) {
-              const imageData = await response.json();
-              if (imageData.status === 'success') {
-                // Once image is generated, show it in the bot bubble
-                appendMessage('<img src="' + imageData.output[0] + '" alt="Generated Image" width="200"/>', 'bot');
-                imageGenerated = true;
-              }
-            }
-            await new Promise(resolve => setTimeout(resolve, 3000)); // Poll every 3 seconds
-          }
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+    }
+
+    async function streamResponse(reader) {
+      const decoder = new TextDecoder();
+      let done = false;
+
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
+          appendMessage(chunk, 'bot', 'bot-avatar.png', true);
         }
-  
-        async function streamResponse(reader) {
-          const decoder = new TextDecoder();
-          let done = false;
-  
-          while (!done) {
-            const { value, done: readerDone } = await reader.read();
-            done = readerDone;
-  
-            if (value) {
-              const chunk = decoder.decode(value, { stream: true });
-              appendMessage(chunk, 'bot', true); // Append the chunk to the same bubble
-            }
-          }
-  
-          // After streaming is done, reset the streamingBubble
-          streamingBubble = null;
+      }
+
+      streamingBubble = null;
+    }
+
+    function sendMessage() {
+      const userMessage = chatInput.value;
+      if (userMessage.trim()) {
+        appendMessage(userMessage, 'user', 'user-avatar.png');
+        chatInput.value = '';
+        sendButton.disabled = true;
+
+        conversationHistory.push({ role: 'user', content: userMessage });
+
+        if (modelName.startsWith('imagegen:')) {
+          fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+            body: JSON.stringify({ message: userMessage })
+          })
+          .then(response => response.json())
+          .then(data => {
+            const imageId = data.response;
+            pollForImage(imageId);
+          })
+          .catch(error => {
+            console.error('Error generating image:', error);
+            appendMessage('Error generating image.', 'bot', 'bot-avatar.png');
+          });
+        } else {
+          fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+            body: JSON.stringify({ messages: conversationHistory })
+          })
+          .then(response => {
+            const reader = response.body.getReader();
+            return streamResponse(reader);
+          })
+          .then(() => {
+            conversationHistory.push({ role: 'assistant', content: '...' });
+          })
+          .catch(error => {
+            console.error('Error streaming response:', error);
+            appendMessage('Error communicating with the bot.', 'bot', 'bot-avatar.png');
+          });
         }
-  
-        function sendMessage() {
-          const userMessage = chatInput.value;
-          if (userMessage.trim()) {
-            // Add user message to chat
-            appendMessage(userMessage, 'user');
-            chatInput.value = '';
-            sendButton.disabled = true;
-  
-            // Add user message to conversation history
-            conversationHistory.push({ role: 'user', content: userMessage });
-  
-            if (modelName.startsWith('imagegen:')) {
-              // If the model is for image generation, send to the image generation API
-              fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
-                body: JSON.stringify({ message: userMessage })
-              })
-              .then(response => response.json())
-              .then(data => {
-                const imageId = data.response; 
-                pollForImage(imageId); 
-              })
-              .catch(error => {
-                console.error('Error generating image:', error);
-                appendMessage('Error generating image.', 'bot');
-              });
-            } else {
-              // For text-based model, use the regular streaming approach
-              fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
-                body: JSON.stringify({ messages: conversationHistory })
-              })
-              .then(response => {
-                const reader = response.body.getReader();
-                return streamResponse(reader);
-              })
-              .then(() => {
-                conversationHistory.push({ role: 'assistant', content: '...' });
-              })
-              .catch(error => {
-                console.error('Error streaming response:', error);
-                appendMessage('Error communicating with the bot.', 'bot');
-              });
-            }
-          }
-        }
-  
-        sendButton.addEventListener('click', sendMessage);
-  
-        chatInput.addEventListener('keypress', function(event) {
-          if (event.key === 'Enter' && !sendButton.disabled) {
-            sendMessage();
-          }
-        });
-      </script>
-    </body>
-    </html>
+      }
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+
+    chatInput.addEventListener('keypress', function(event) {
+      if (event.key === 'Enter' && !sendButton.disabled) {
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>
+
     `;
-  
+
     res.send(widgetHTML);
-  });
+});
+
   
   
 
