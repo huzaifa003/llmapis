@@ -214,11 +214,16 @@ router.post('/:botId/chat/start', botApiKeyMiddleware, async (req, res) => {
 router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) => {
   try {
     const { botId, chatId } = req.params;
-    const { width = 400, height = 600, modelName = 'openai:gpt-3.5-turbo' } = req.query;  // Allow custom width and height
+    const { width = 400, height = 600 } = req.query;  // Allow custom width and height
+    const modelName = req.bot.modelName;
+    if (!modelName) {
+      return res.status(400).json({ error: 'Model name is required in Bot' });
+    }
+    // console.log(modelName);
 
     const apiKey = req.bot.apiKey;
     const embedUrl = `${process.env.BACKEND_URL}/api/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}&modelName=${modelName}`;
-    console.log("embeded", embedUrl);
+    // console.log("embeded", embedUrl);
 
     const embedCode = `
   <iframe
@@ -961,7 +966,7 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
     let conversationHistory = [];
     let streamingBubble = null;
 
-    const apiUrl = modelName.startsWith('imagegen:')
+    const apiUrl = modelName.startsWith('imagegen:') || modelName.startsWith('dalle:')
       ? '${process.env.BACKEND_URL}/api/bot/' + botId + '/chat/' + chatId + '/image'
       : '${process.env.BACKEND_URL}/api/bot/' + botId + '/chat/' + chatId + '/stream';
 
@@ -969,7 +974,7 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
       sendButton.disabled = chatInput.value.trim() === '';
     });
 
-    function appendMessage(content, className, avatarUrl, isStreaming = false) {
+    function appendMessage(content, className, avatarUrl, isStreaming = false, isImage = false) {
       if (isStreaming && streamingBubble) {
         streamingBubble.innerHTML += content;
       } else {
@@ -987,7 +992,11 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
           streamingBubble = messageBubble;
         }
 
-        messageBubble.innerHTML = content;
+        if (isImage) {
+          messageBubble.innerHTML = '<img src="' + content + '" alt="Generated Image" width="200"/>';
+        } else {
+          messageBubble.innerHTML = content;
+        }
 
         messageWrapper.appendChild(avatar);
         messageWrapper.appendChild(messageBubble);
@@ -1001,8 +1010,8 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
       let imageGenerated = false;
 
       // Show loading spinner before starting to poll for the image
-  const loadingSpinnerHtml = '<div class="loading-spinner"></div>';
-  appendMessage(loadingSpinnerHtml, 'bot', 'bot-avatar.png');
+      const loadingSpinnerHtml = '<div class="loading-spinner"></div>';
+      appendMessage(loadingSpinnerHtml, 'bot', 'bot-avatar.png');
 
       while (!imageGenerated) {
         const response = await fetch(imageApiUrl, {
@@ -1017,8 +1026,15 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
         if (response.ok) {
           const imageData = await response.json();
           if (imageData.status === 'success') {
+            const imageUrl = imageData.output[0];
             const imageWrapper = chatBox.querySelector('.loading-spinner').parentNode;
-            imageWrapper.innerHTML = '<img src="' + imageData.output[0] + '" alt="Generated Image" width="200"/>';
+            imageWrapper.parentNode.removeChild(imageWrapper);
+            appendMessage(imageUrl, 'bot', 'bot-avatar.png', false, true);
+            imageGenerated = true;
+          } else if (imageData.status === 'error') {
+            const imageWrapper = chatBox.querySelector('.loading-spinner').parentNode;
+            imageWrapper.parentNode.removeChild(imageWrapper);
+            appendMessage('Error generating image.', 'bot', 'bot-avatar.png');
             imageGenerated = true;
           }
         }
@@ -1052,7 +1068,7 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
 
         conversationHistory.push({ role: 'user', content: userMessage });
 
-        if (modelName.startsWith('imagegen:')) {
+        if (modelName.startsWith('imagegen:') || modelName.startsWith('dalle:')) {
           fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
@@ -1060,8 +1076,16 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
           })
           .then(response => response.json())
           .then(data => {
-            const imageId = data.response;
-            pollForImage(imageId);
+            if (modelName.startsWith('imagegen:')) {
+              // For imagegen: models, poll for the image using the returned ID
+              const imageId = data.response;
+              pollForImage(imageId);
+            } else if (modelName.startsWith('dalle:')) {
+              // For dalle: models, directly display the image URL
+              const imageUrl = data.response;
+              // appendMessage(JSON.stringify(imageUrl), 'bot', 'bot-avatar.png', false, false);
+              appendMessage(imageUrl[0].url, 'bot', 'bot-avatar.png', false, true);
+            }
           })
           .catch(error => {
             console.error('Error generating image:', error);
@@ -1098,8 +1122,7 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
   </script>
 </body>
 </html>
-
-    `;
+  `;
 
   res.send(widgetHTML);
 });
