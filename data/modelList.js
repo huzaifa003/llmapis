@@ -166,6 +166,23 @@ const imageModelsData = [
       },
     ],
   },
+  {
+    label: "Dalle",
+    options: [
+      {
+        value: "dalle:dall-e-3",
+        label: "Dalle 3",
+        isPro: true,
+        description: "Dalle 3 is the LATEST large language model optimized for image generation",
+      },
+      {
+        value: "dalle:dall-e-2",
+        label: "Dalle 2",
+        isPro: true,
+        description: "Dalle 2 is a large language model optimized for image generation",
+      },
+    ]
+  }
 ];
 
 export { modelsData, imageModelsData };
