@@ -988,14 +988,18 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
 
 
 
+    let accumulatedContent = '';
     function appendMessage(content, className, avatarUrl, isStreaming = false, isImage = false) {
       if (isStreaming && streamingBubble) {
-        let final_content = String(content).trim(); // Ensure it's a string and remove leading/trailing newlines
         
+        accumulatedContent += String(content);
+
+        // Re-parse the entire accumulated content
+        streamingBubble.innerHTML = marked.parse(accumulatedContent);
+
+        // Scroll to the bottom
+        chatBox.scrollTop = chatBox.scrollHeight;
         
-        // Replace multiple newlines inside the content with a single newline
-        final_content = cleanUpNewlines(final_content);
-        streamingBubble.innerHTML += marked.parse(final_content);
       } else {
         const messageWrapper = document.createElement('div');
         messageWrapper.classList.add('message-wrapper', className, 'fade-in');
@@ -1008,7 +1012,7 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
         messageBubble.classList.add('message-bubble', className);
 
         if (isStreaming) {
-          
+          accumulatedContent = '';
           streamingBubble = messageBubble;
         }
 
