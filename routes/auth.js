@@ -54,6 +54,61 @@ router.post('/register', async (req, res) => {
   }
 });
 
+
+// Google Sign-In Endpoint
+// Unified Google Sign-In/Sign-Up Endpoint
+router.post('/google-auth', async (req, res) => {
+  const { googleIdToken, subscriptionTier = 'Free' } = req.body;
+
+  try {
+    // Verify Google ID token and get user information from Firebase
+    const googleUser = await admin.auth().verifyIdToken(googleIdToken);
+
+    const { uid, email } = googleUser;
+    const db = admin.firestore();
+    const usersRef = db.collection('users').doc(uid);
+
+    const userSnapshot = await usersRef.get();
+
+    if (!userSnapshot.exists) {
+      // If user doesn't exist, create new user in Firestore
+      await usersRef.set({
+        email,
+        tokenCount: 0,
+        subscriptionTier,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(), // Add creation timestamp
+      });
+
+      // Optionally: Set custom claims (e.g., subscription tier)
+      await admin.auth().setCustomUserClaims(uid, { subscriptionTier });
+    }
+
+    // // Generate a new Firebase ID token for the user
+    // const response = await axios.post(
+    //   `https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=${process.env.FIREBASE_API_KEY}`,
+    //   {
+    //     postBody: `id_token=${googleIdToken}&providerId=google.com`,
+    //     requestUri: "http://localhost",
+    //     returnSecureToken: true,
+    //   }
+    // );
+
+    // const { idToken, localId } = response.data;
+
+    // Respond with the Firebase ID token
+    res.status(200).json({
+      message: 'User authenticated successfully.',
+      idToken: googleIdToken,
+      userId: uid,
+      existingUser: userSnapshot.data(),
+    });
+  } catch (err) {
+    res.status(400).json({ error: 'Authentication failed.', details: err.message });
+  }
+});
+
+
+
 // Login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;

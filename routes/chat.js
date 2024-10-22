@@ -397,43 +397,77 @@ router.post(
 
             let responseText;
 
+            if (modelName.startsWith('imagegen:')) {
+                // console.log(modelName);
+                let modelId = modelName.split(":")[1];
+                // console.log(modelId);
 
-            // console.log(modelName);
-            let modelId = modelName.split(":")[1];
-            // console.log(modelId);
+                // Call the generateImage function
+                const response = await generateImage(message, modelId);
+                // console.log(response);
 
-            // Call the generateImage function
-            const response = await generateImage(message, modelId);
-            // console.log(response);
+                // responseText = "######REQUEST_ID:" + response.id;
+                responseText = response.id;
 
-            // responseText = "######REQUEST_ID:" + response.id;
-            responseText = response.id;
-
-            // Increment user's image generation count
-            const userRef = db.collection('users').doc(req.user.uid);
-            await userRef.update({
-                imageGenerationCount: admin.firestore.FieldValue.increment(1),  // Increment image count
-            });
-
-
-            // Save user message to Firestore
-            const userMessageRef = messagesRef.doc();
-            await userMessageRef.set({
-                role: 'user',
-                content: message,
-                timestamp: admin.firestore.FieldValue.serverTimestamp(),
-            });
-
-            // Save assistant response to Firestore
-            const assistantMessageRef = messagesRef.doc();
-            await assistantMessageRef.set({
-                role: 'assistant',
-                content: responseText,
-                timestamp: admin.firestore.FieldValue.serverTimestamp(),
-            });
+                // Increment user's image generation count
+                const userRef = db.collection('users').doc(req.user.uid);
+                await userRef.update({
+                    imageGenerationCount: admin.firestore.FieldValue.increment(1),  // Increment image count
+                });
 
 
-            res.json({ response: responseText });
+                // Save user message to Firestore
+                const userMessageRef = messagesRef.doc();
+                await userMessageRef.set({
+                    role: 'user',
+                    content: message,
+                    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+                });
+
+                // Save assistant response to Firestore
+                const assistantMessageRef = messagesRef.doc();
+                await assistantMessageRef.set({
+                    role: 'assistant',
+                    content: responseText,
+                    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+                });
+
+
+                res.json({ response: responseText });
+            } else if (modelName.startsWith('dalle:')) {
+                // Save the message and response to Firestore
+                const messagesRef = db.collection('bots').doc(botId).collection('chats').doc(chatId).collection('messages');
+
+                const response = await generateDalleImg(message, modelName);
+
+                // Save user message
+                await messagesRef.add({
+                    role: 'user',
+                    content: message,
+                    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+                });
+
+                // Save bot response
+                await messagesRef.add({
+                    role: 'assistant',
+                    content: response,
+                    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+                    generation: "dalle",
+                });
+
+                await userRef.update({
+                    imageGenerationCount: admin.firestore.FieldValue.increment(1),
+                });
+
+
+                res.json({ response: response });
+            }
+
+            else {
+                throw new Error('Model not supported.');
+            }
+
+
         } catch (err) {
             res
                 .status(500)
