@@ -1,5 +1,5 @@
 import axios from 'axios';
-
+import OpenAI from 'openai';
 export async function generateImage(prompt, modelId = 'sdxlceshi', options = {}) {
   const apiKey = String(process.env.STABLE_DIFFUSION_API_KEY); // Replace with your actual API key
   const baseURL = 'https://modelslab.com/api/v6/images/text2img';  // Replace with actual API URL
@@ -56,7 +56,7 @@ export async function generateImage(prompt, modelId = 'sdxlceshi', options = {})
   }
 }
 
-export async function fetchImg(request_id){
+export async function fetchImg(request_id) {
   const apiKey = String(process.env.STABLE_DIFFUSION_API_KEY); // Replace with your actual API key
   const baseURL = 'https://modelslab.com/api/v6/images/fetch';  // Replace with actual API URL
   try {
@@ -74,4 +74,19 @@ export async function fetchImg(request_id){
     console.error('Error fetching image:', error.message);
     throw error;
   }
+}
+
+
+export const generateDalleImg = async (prompt, modelName="dall-e-3", kwargs={}) => {
+  let finalName = modelName.replace("dalle:", "");
+  const apiKey = String(process.env.OPENAI_API_KEY); // Replace with your actual API key
+  const openai = new OpenAI({ apiKey });
+  const response = await openai.images.generate({
+    model:finalName,
+    prompt: prompt,
+    n: 1,
+    size: '1024x1024',
+  })
+
+  return response.data;
 }

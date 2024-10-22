@@ -6,7 +6,7 @@ import { calculateTokensUsedLangChain } from '../utils/tokenUtils.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import apiKeyMiddleware from '../middleware/apiKeyMiddleware.js';
 import { getModelInstance, incrementTimestamp } from '../services/langchainServices.js';
-import { fetchImg, generateImage } from '../services/stableDiffusionService.js';
+import { fetchImg, generateDalleImg, generateImage } from '../services/stableDiffusionService.js';
 import { modelsData, imageModelsData } from '../data/modelList.js';
 import { generateApiKey } from '../services/apiKeyGenerator.js';
 import botApiKeyMiddleware from '../middleware/botApiKeyMiddleware.js';
@@ -218,7 +218,7 @@ router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) =
 
     const apiKey = req.bot.apiKey;
     const embedUrl = `${process.env.BACKEND_URL}/api/bot/${botId}/chat/${chatId}/widget?apiKey=${apiKey}&modelName=${modelName}`;
-console.log("embeded",embedUrl);
+    console.log("embeded", embedUrl);
 
     const embedCode = `
   <iframe
@@ -577,7 +577,30 @@ router.post('/:botId/chat/:chatId/image', botApiKeyMiddleware, async (req, res) 
 
       res.json({ response: responseText });
 
-    } else {
+    } else if (modelName.startsWith('dalle:')) {
+      // Save the message and response to Firestore
+      const messagesRef = db.collection('bots').doc(botId).collection('chats').doc(chatId).collection('messages');
+
+      const response = await generateDalleImg(message, modelName);
+
+      // Save user message
+      await messagesRef.add({
+        role: 'user',
+        content: message,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Save bot response
+      await messagesRef.add({
+        role: 'assistant',
+        content: response,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        generation: "dalle",
+      });
+
+      res.json({ response: response });
+    }
+    else {
       throw new Error('Model not supported.');
     }
 
@@ -736,10 +759,10 @@ var_dump($result);
 
 
 router.get('/:botId/chat/:chatId/widget', async (req, res) => {
-    const { botId, chatId } = req.params;
-    const { apiKey, modelName } = req.query;
+  const { botId, chatId } = req.params;
+  const { apiKey, modelName } = req.query;
 
-    const widgetHTML = `
+  const widgetHTML = `
    <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1070,11 +1093,11 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
 
     `;
 
-    res.send(widgetHTML);
+  res.send(widgetHTML);
 });
 
-  
-  
+
+
 
 // router.get('/:botId/chat/:chatId/embed', botApiKeyMiddleware, async (req, res) => {
 //   try {
