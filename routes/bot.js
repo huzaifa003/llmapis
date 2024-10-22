@@ -782,6 +782,10 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chatbot Widget</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+
+
   <style>
     body {
       margin: 0;
@@ -974,9 +978,24 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
       sendButton.disabled = chatInput.value.trim() === '';
     });
 
+    function cleanUpNewlines(text) {
+      // Replace multiple consecutive newlines with a single newline
+      text = text.replace(/\\n{2,}/g, '\\n');
+      
+      // Remove the trailing newline at the end
+      return text.replace(/\\n+$/g, '');
+    }
+
+
+
     function appendMessage(content, className, avatarUrl, isStreaming = false, isImage = false) {
       if (isStreaming && streamingBubble) {
-        streamingBubble.innerHTML += content;
+        let final_content = String(content).trim(); // Ensure it's a string and remove leading/trailing newlines
+        
+        
+        // Replace multiple newlines inside the content with a single newline
+        final_content = cleanUpNewlines(final_content);
+        streamingBubble.innerHTML += marked.parse(final_content);
       } else {
         const messageWrapper = document.createElement('div');
         messageWrapper.classList.add('message-wrapper', className, 'fade-in');
@@ -989,6 +1008,7 @@ router.get('/:botId/chat/:chatId/widget', async (req, res) => {
         messageBubble.classList.add('message-bubble', className);
 
         if (isStreaming) {
+          
           streamingBubble = messageBubble;
         }
 
