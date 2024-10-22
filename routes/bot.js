@@ -598,6 +598,11 @@ router.post('/:botId/chat/:chatId/image', botApiKeyMiddleware, async (req, res) 
         generation: "dalle",
       });
 
+      await userRef.update({
+        imageGenerationCount: admin.firestore.FieldValue.increment(1),
+      });
+      
+
       res.json({ response: response });
     }
     else {
