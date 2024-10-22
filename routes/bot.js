@@ -590,6 +590,12 @@ router.post('/:botId/chat/:chatId/image', botApiKeyMiddleware, async (req, res) 
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
       });
 
+      
+
+      await userRef.update({
+        imageGenerationCount: admin.firestore.FieldValue.increment(1),
+      });
+
       // Save bot response
       await messagesRef.add({
         role: 'assistant',
@@ -597,11 +603,8 @@ router.post('/:botId/chat/:chatId/image', botApiKeyMiddleware, async (req, res) 
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         generation: "dalle",
       });
-
-      await userRef.update({
-        imageGenerationCount: admin.firestore.FieldValue.increment(1),
-      });
       
+
 
       res.json({ response: response });
     }
