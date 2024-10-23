@@ -18,6 +18,10 @@ import { modelsData, imageModelsData } from "../data/modelList.js";
 import { generateApiKey } from "../services/apiKeyGenerator.js";
 import botApiKeyMiddleware from "../middleware/botApiKeyMiddleware.js";
 
+import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
+
+
 const router = express.Router();
 router.post("/", authMiddleware, async (req, res) => {
   try {
@@ -542,138 +546,232 @@ router.post(
   }
 );
 
-router.post(
-  "/:botId/chat/:chatId/image",
-  botApiKeyMiddleware,
-  async (req, res) => {
-    try {
-      const { botId, chatId } = req.params;
-      const { message } = req.body;
-
-      if (!message || message.trim() === "") {
-        return res.status(400).json({ error: "Message is required" });
-      }
-
-      // Ensure the botId from the URL matches the authenticated bot
-      if (botId !== req.bot.botId) {
-        return res.status(403).json({ error: "Bot ID mismatch" });
-      }
-
-      const db = admin.firestore();
-
-      // Get the bot's system context, modelName, kwargs, and ownerUserId
-      const { systemContext, modelName, kwargs, ownerUserId } = req.bot;
-
-      // Ensure the owner user exists
-      const userRef = db.collection("users").doc(ownerUserId);
-      const userDoc = await userRef.get();
-      if (!userDoc.exists) {
-        throw new Error("Owner user does not exist");
-      }
-
-      if (modelName.startsWith("imagegen:")) {
-        // Handle image generation
-
-        const modelId = modelName.split(":")[1];
-
-        // Call the generateImage function
-        const response = await generateImage(message, modelId);
-
-        if (response.status === "error") {
-          throw new Error("SD API Returned an Error: " + response.message);
-        }
-
-        // The response may contain an ID or URL of the generated image
-        const responseText = response.id || response.imageUrl;
-
-        // Update usage stats for the bot's owner
-        await userRef.update({
-          imageGenerationCount: admin.firestore.FieldValue.increment(1),
-        });
-
-        // Save the message and response to Firestore
-        const messagesRef = db
-          .collection("bots")
-          .doc(botId)
-          .collection("chats")
-          .doc(chatId)
-          .collection("messages");
-
-        // Save user message
-        await messagesRef.add({
-          role: "user",
-          content: message,
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        // Save bot response
-        await messagesRef.add({
-          role: "assistant",
-          content: responseText,
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        res.json({ response: responseText });
-      } else if (modelName.startsWith("dalle:")) {
-        // Save the message and response to Firestore
-        const messagesRef = db
-          .collection("bots")
-          .doc(botId)
-          .collection("chats")
-          .doc(chatId)
-          .collection("messages");
-
-        const response = await generateDalleImg(message, modelName);
-
-        // Save user message
-        await messagesRef.add({
-          role: "user",
-          content: message,
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        await userRef.update({
-          imageGenerationCount: admin.firestore.FieldValue.increment(1),
-        });
-
-        // Save bot response
-        await messagesRef.add({
-          role: "assistant",
-          content: response,
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-          generation: "dalle",
-        });
-
-        res.json({ response: response });
-      } else {
-        throw new Error("Model not supported.");
-      }
-    } catch (error) {
-      res
-        .status(500)
-        .json({ error: "Failed to process message", details: error.message });
-    }
-  }
-);
-
-router.post("/get_images", botApiKeyMiddleware, async (req, res) => {
+router.post('/:botId/chat/:chatId/image', botApiKeyMiddleware, async (req, res) => {
   try {
-    fetchImg(req.body.request_id)
-      .then((response) => {
-        let resp = { ...response, type: "image" };
-        res.send(resp);
-      })
-      .catch((error) => {
-        console.log(error);
-        res.send(error);
+    const { botId, chatId } = req.params;
+    const { message } = req.body;
+
+    if (!message || message.trim() === '') {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    // Ensure the botId from the URL matches the authenticated bot
+    if (botId !== req.bot.botId) {
+      return res.status(403).json({ error: 'Bot ID mismatch' });
+    }
+
+    const db = admin.firestore();
+
+    // Get the bot's system context, modelName, kwargs, and ownerUserId
+    const { systemContext, modelName, kwargs, ownerUserId } = req.bot;
+
+    // Ensure the owner user exists
+    const userRef = db.collection('users').doc(ownerUserId);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      throw new Error('Owner user does not exist');
+    }
+
+    if (modelName.startsWith('imagegen:')) {
+      // Handle image generation
+      const modelId = modelName.split(":")[1];
+
+      // Call the generateImage function
+      const response = await generateImage(message, modelId);
+
+      if (response.status === 'error') {
+        throw new Error('SD API Returned an Error: ' + response.message);
+      }
+
+      const requestId = response.id;
+
+      // Update usage stats for the bot's owner
+      await userRef.update({
+        imageGenerationCount: admin.firestore.FieldValue.increment(1),
       });
-  } catch (err) {
-    console.log(err);
+
+      // Save the message and requestId to Firestore
+      const messagesRef = db
+        .collection('bots')
+        .doc(botId)
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages');
+
+      // Save user message
+      await messagesRef.add({
+        role: 'user',
+        content: message,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Save bot response with requestId (we'll update this later when the image is ready)
+      await messagesRef.add({
+        role: 'assistant',
+        content: 'Image generation in progress...',
+        requestId: requestId,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        generation: 'imagegen',
+      });
+
+      res.json({ response: requestId });
+
+    } else if (modelName.startsWith('dalle:')) {
+      const response = await generateDalleImg(message, modelName);
+
+      // Get the image URL from response
+      console.log(response);
+      const imageUrl = response[0].url;
+
+      // Generate a unique file name
+      const imageFileName = `${uuidv4()}.png`; // Adjust extension if necessary
+
+      // Define the file path in Firebase Storage
+      const filePath = `${botId}/${chatId}/images/${imageFileName}`;
+
+      // Download the image and upload to Firebase Storage
+      const bucket = admin.storage().bucket();
+
+      const axiosResponse = await axios({
+        url: imageUrl,
+        method: 'GET',
+        responseType: 'stream'
+      });
+
+      const file = bucket.file(filePath);
+
+      await new Promise((resolve, reject) => {
+        const writeStream = file.createWriteStream({
+          metadata: {
+            contentType: 'image/png' // Adjust if necessary
+          }
+        });
+
+        axiosResponse.data
+          .pipe(writeStream)
+          .on('finish', resolve)
+          .on('error', reject);
+      });
+
+      // Optionally, make the file publicly accessible
+      await file.makePublic();
+
+      // Get the public URL
+      const downloadURL = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+
+      // Save the message and response to Firestore
+      const messagesRef = db
+        .collection('bots')
+        .doc(botId)
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages');
+
+      // Save user message
+      await messagesRef.add({
+        role: 'user',
+        content: message,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      await userRef.update({
+        imageGenerationCount: admin.firestore.FieldValue.increment(1),
+      });
+
+      // Save bot response with the Firebase Storage URL
+      await messagesRef.add({
+        role: 'assistant',
+        content: downloadURL,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        generation: "dalle",
+      });
+
+      res.json({ response: downloadURL });
+    }
+
+  } catch (error) {
     res
       .status(500)
-      .json({ error: "Failed to process message.", details: err.message });
+      .json({ error: 'Failed to generate image', details: error.message });
   }
 });
+
+router.post('/get_images', botApiKeyMiddleware, async (req, res) => {
+  try {
+    const { request_id, chatId } = req.body;
+    const { botId } = req.bot;
+
+    if (!chatId) {
+      return res.status(400).json({ error: 'chatId is required' });
+    }
+
+    const response = await fetchImg(request_id);
+
+    if (response.status === 'success') {
+      const imageUrl = response.output[0];
+
+      // Proceed to download and upload the image to Firebase Storage
+      const imageFileName = `${uuidv4()}.png`; // Adjust extension if necessary
+      const filePath = `${botId}/${chatId}/images/${imageFileName}`;
+
+      const bucket = admin.storage().bucket();
+
+      const axiosResponse = await axios({
+        url: imageUrl,
+        method: 'GET',
+        responseType: 'stream'
+      });
+
+      const file = bucket.file(filePath);
+
+      await new Promise((resolve, reject) => {
+        const writeStream = file.createWriteStream({
+          metadata: {
+            contentType: 'image/png' // Adjust if necessary
+          }
+        });
+
+        axiosResponse.data
+          .pipe(writeStream)
+          .on('finish', resolve)
+          .on('error', reject);
+      });
+
+      // Optionally, make the file publicly accessible
+      await file.makePublic();
+
+      // Get the public URL
+      const downloadURL = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+
+      // Save the image URL to the conversation in Firestore
+      const db = admin.firestore();
+      const messagesRef = db
+        .collection('bots')
+        .doc(botId)
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages');
+
+      // Save bot response
+      await messagesRef.add({
+        role: 'assistant',
+        content: downloadURL,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        generation: 'imagegen',
+      });
+
+      // Return the URL to the client
+      res.json({ response: downloadURL });
+    } else {
+      // If not yet ready, or error
+      res.json(response);
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: 'Failed to process image', details: error.message });
+  }
+});
+
 
 router.get(
   "/:botId/chat/:chatId/code-snippet/:language",
