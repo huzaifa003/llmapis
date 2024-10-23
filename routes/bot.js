@@ -1070,40 +1070,50 @@ router.get("/:botId/chat/:chatId/widget", async (req, res) => {
       }
     }
 
-    async function pollForImage(imageId) {
-      const imageApiUrl = '${process.env.BACKEND_URL}/api/bot/get_images';
-      let imageGenerated = false;
+   async function pollForImage(imageId) {
+  const imageApiUrl = '${process.env.BACKEND_URL}/api/bot/get_images';
+  let imageGenerated = false;
+  let retries = 0;
+  const maxRetries = 8;
 
-     
+  while (!imageGenerated && retries < maxRetries) {
+    const response = await fetch(imageApiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey
+      },
+      body: JSON.stringify({ request_id: imageId })
+    });
 
-      while (!imageGenerated) {
-        const response = await fetch(imageApiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey
-          },
-          body: JSON.stringify({ request_id: imageId })
-        });
-
-        if (response.ok) {
-          const imageData = await response.json();
-          if (imageData.status === 'success') {
-            const imageUrl = imageData.output[0];
-            const imageWrapper = chatBox.querySelector('.loading-spinner').parentNode;
-            imageWrapper.parentNode.removeChild(imageWrapper);
-            appendMessage(imageUrl, 'bot', 'bot-avatar.png', false, true);
-            imageGenerated = true;
-          } else if (imageData.status === 'error') {
-            const imageWrapper = chatBox.querySelector('.loading-spinner').parentNode;
-            imageWrapper.parentNode.removeChild(imageWrapper);
-            appendMessage('Error generating image.', 'bot', 'bot-avatar.png');
-            imageGenerated = true;
-          }
-        }
-        await new Promise(resolve => setTimeout(resolve, 3000));
+    if (response.ok) {
+      const imageData = await response.json();
+      const imageWrapper = chatBox.querySelector('.loading-spinner').parentNode;
+      
+      if (imageData.status === 'success') {
+        const imageUrl = imageData.output[0];
+        imageWrapper.parentNode.removeChild(imageWrapper);
+        appendMessage(imageUrl, 'bot', 'bot-avatar.png', false, true);
+        imageGenerated = true;
+      } else if (imageData.status === 'error') {
+        imageWrapper.parentNode.removeChild(imageWrapper);
+        appendMessage('Error generating image.', 'bot', 'bot-avatar.png');
+        imageGenerated = true;
       }
     }
+
+    retries++; // Increment the retry counter
+    if (!imageGenerated && retries < maxRetries) {
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds before retrying
+    } else if (retries >= maxRetries) {
+      const imageWrapper = chatBox.querySelector('.loading-spinner').parentNode;
+      imageWrapper.parentNode.removeChild(imageWrapper);
+      appendMessage('Max retries reached. Image generation failed.', 'bot', 'bot-avatar.png');
+      break;
+    }
+  }
+}
+
 
     async function streamResponse(reader) {
       const decoder = new TextDecoder();
