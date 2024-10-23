@@ -580,7 +580,7 @@ router.post('/:botId/chat/:chatId/image', botApiKeyMiddleware, async (req, res) 
       const response = await generateImage(message, modelId);
 
       if (response.status === 'error') {
-        throw new Error('SD API Returned an Error: ' + response);
+        throw new Error('SD API Returned an Error: ' + JSON.stringify(response));
       }
 
       const requestId = response.id;
