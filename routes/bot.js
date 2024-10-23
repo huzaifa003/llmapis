@@ -581,9 +581,9 @@ router.post(
         // Call the generateImage function
         const response = await generateImage(message, modelId);
 
-        if (response.status === "error") {
-          throw new Error("SD API Returned an Error: " + response);
-        }
+      if (response.status === 'error') {
+        throw new Error('SD API Returned an Error: ' + JSON.stringify(response));
+      }
 
         const requestId = response.id;
 
