@@ -1074,9 +1074,7 @@ router.get("/:botId/chat/:chatId/widget", async (req, res) => {
       const imageApiUrl = '${process.env.BACKEND_URL}/api/bot/get_images';
       let imageGenerated = false;
 
-      // Show loading spinner before starting to poll for the image
-      const loadingSpinnerHtml = '<div class="loading-spinner"></div>';
-      appendMessage(loadingSpinnerHtml, 'bot', 'bot-avatar.png');
+     
 
       while (!imageGenerated) {
         const response = await fetch(imageApiUrl, {
