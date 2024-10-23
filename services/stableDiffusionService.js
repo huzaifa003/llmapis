@@ -27,15 +27,15 @@ export async function generateImage(prompt, modelId = 'sdxlceshi', options = {})
 
   const requestOptions = { ...defaultOptions, ...options };
 
-  console.log(
-    {
-      key: apiKey,
-      model_id: modelId,
-      prompt: prompt,
-      ...requestOptions
-    }
-  )
-  console.log(apiKey);
+  // console.log(
+  //   {
+  //     key: apiKey,
+  //     model_id: modelId,
+  //     prompt: prompt,
+  //     ...requestOptions
+  //   }
+  // )
+  // console.log(apiKey);
   try {
     const response = await axios.post(baseURL, {
       key: apiKey,
@@ -50,7 +50,7 @@ export async function generateImage(prompt, modelId = 'sdxlceshi', options = {})
     return response.data;
 
   } catch (error) {
-    // console.log(error) 
+    console.log(error) 
     console.error('Error generating image:', error.message);
     throw error;
   }
