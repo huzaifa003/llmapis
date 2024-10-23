@@ -50,7 +50,7 @@ export async function generateImage(prompt, modelId = 'sdxlceshi', options = {})
     return response.data;
 
   } catch (error) {
-    // console.log(error) 
+    console.log(error) 
     console.error('Error generating image:', error.message);
     throw error;
   }

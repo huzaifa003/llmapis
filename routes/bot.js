@@ -580,7 +580,7 @@ router.post('/:botId/chat/:chatId/image', botApiKeyMiddleware, async (req, res) 
       const response = await generateImage(message, modelId);
 
       if (response.status === 'error') {
-        throw new Error('SD API Returned an Error: ' + response.message);
+        throw new Error('SD API Returned an Error: ' + response);
       }
 
       const requestId = response.id;
@@ -768,7 +768,7 @@ router.post('/get_images', botApiKeyMiddleware, async (req, res) => {
     }
   } catch (error) {
     console.log(error);
-    res.status(500).json({ error: 'Failed to process image', details: error.message });
+    res.status(500).json({ error: 'Failed to process image', details: error });
   }
 });
 
