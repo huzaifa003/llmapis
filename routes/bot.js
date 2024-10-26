@@ -21,7 +21,11 @@ import botApiKeyMiddleware from "../middleware/botApiKeyMiddleware.js";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 
+import multer from "multer";
+
+// routes/bot.js
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() }); // Store the file in memory
 router.post("/", authMiddleware, async (req, res) => {
   try {
     const { botName, systemContext, modelName, kwargs } = req.body;
@@ -123,6 +127,93 @@ router.delete("/:botId", authMiddleware, async (req, res) => {
       .json({ error: "Failed to delete bot", details: error.message });
   }
 });
+
+
+
+router.post("/add-avatar/:botId", authMiddleware, upload.single("avatarFile"), async (req, res) => {
+  try {
+    const { botId } = req.params;
+
+    // Check if the avatar file is provided
+    if (!req.file) {
+      return res.status(400).json({ error: "Avatar file is required" });
+    }
+
+    const db = admin.firestore();
+    const botRef = db.collection("bots").doc(botId);
+
+    // Check if the bot exists
+    const botDoc = await botRef.get();
+    if (!botDoc.exists) {
+      return res.status(404).json({ error: "Bot not found" });
+    }
+
+    // Define the file path in Firebase Storage
+    const filePath = `${botId}/avatar/avatar.png`;
+
+    // Access Firebase Storage bucket
+    const bucket = admin.storage().bucket();
+    const file = bucket.file(filePath);
+
+    // Upload the avatar file to Firebase Storage
+    await file.save(req.file.buffer, {
+      metadata: {
+        contentType: req.file.mimetype, // Use the file's MIME type from multer
+      },
+    });
+
+    // Optionally, make the file publicly accessible
+    await file.makePublic();
+
+    // Get the public URL
+    const downloadURL = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+
+    // Update the bot document with the avatar URL
+    await botRef.update({
+      avatarFile: downloadURL,
+    });
+
+    res.json({ message: "Avatar added successfully", botId, avatarURL: downloadURL });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to add avatar", details: error.message });
+  }
+});
+
+router.delete("/delete-avatar/:botId", authMiddleware, async (req, res) => {
+  try {
+    const { botId } = req.params;
+
+    const db = admin.firestore();
+    const botRef = db.collection("bots").doc(botId);
+
+    // Check if the bot exists
+    const botDoc = await botRef.get();
+    if (!botDoc.exists) {
+      return res.status(404).json({ error: "Bot not found" });
+    }
+
+    // Define the file path in Firebase Storage
+    const filePath = `${botId}/avatar/avatar.png`;
+
+    // Access Firebase Storage bucket
+    const bucket = admin.storage().bucket();
+
+    // Delete the avatar file from Firebase Storage
+    const file = bucket.file(filePath);
+    await file.delete();
+
+    // Update the bot document with the avatar URL
+    await botRef.update({
+      avatarFile: null,
+    });
+
+    res.json({ message: "Avatar deleted successfully", botId });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete avatar", details: error.message });
+  }
+});
+
+// Get all chats for a bot
 
 router.get("/:botId/chats", botApiKeyMiddleware, async (req, res) => {
   try {
@@ -581,9 +672,9 @@ router.post(
         // Call the generateImage function
         const response = await generateImage(message, modelId);
 
-      if (response.status === 'error') {
-        throw new Error('SD API Returned an Error: ' + JSON.stringify(response));
-      }
+        if (response.status === 'error') {
+          throw new Error('SD API Returned an Error: ' + JSON.stringify(response));
+        }
 
         const requestId = response.id;
 
