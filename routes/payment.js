@@ -12,36 +12,41 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 // Define price IDs for the three subscription variants
 const prices = {
-
-    premium: 'price_1Q9wQVBrGkHC1KDCmwgAvpgw',
-    pro: 'price_1Q9wPjBrGkHC1KDC8SUtaut2',
+  proWeekly: 'price_1Q9wPjBrGkHC1KDC8SUtaut2',    // Replace with actual Price ID
+  proMonthly: 'price_1QF0YYBrGkHC1KDCb45o3B32',  // Replace with actual Price ID
+  proYearly: 'price_1QF0ZLBrGkHC1KDCgx5xfXXk',    // Replace with actual Price ID
+  premiumWeekly: 'price_1Q9wQVBrGkHC1KDCmwgAvpgw',  // Replace with actual Price ID
+  premiumMonthly: 'price_1QF0ZsBrGkHC1KDCB0kdvYco', // Replace with actual Price ID
+  premiumYearly: 'price_1QF0aGBrGkHC1KDChAyvO91M',   // Replace with actual Price ID
 };
 
 
+
 async function updateUserSubscription(userId, plan, status, subscriptionId, cancelAtPeriodEnd = false, cancelAt = null) {
-    const db = admin.firestore();
+  const db = admin.firestore();
 
-    // Mapping price IDs to plan names
-    const planMapping = {
-        'price_1Q9wQVBrGkHC1KDCmwgAvpgw': 'premium',
-        'price_1Q9wPjBrGkHC1KDC8SUtaut2': 'pro',
-    };
+  const planMapping = {
+      'price_1Q9wPjBrGkHC1KDC8SUtaut2': 'proWeekly',
+      'price_1QF0YYBrGkHC1KDCb45o3B32': 'proMonthly',
+      'price_1QF0ZLBrGkHC1KDCgx5xfXXk': 'proYearly',
+      'price_1Q9wQVBrGkHC1KDCmwgAvpgw': 'premiumWeekly',
+      'price_1QF0ZsBrGkHC1KDCB0kdvYco': 'premiumMonthly',
+      'price_1QF0aGBrGkHC1KDChAyvO91M': 'premiumYearly',
+  };
 
-    const newPlan = planMapping[plan] || 'free'; // Default to 'free' if no match
-    console.log(newPlan)
-    const userRef = db.collection('users').doc(userId);
+  const newPlan = planMapping[plan] || 'free';
+  const userRef = db.collection('users').doc(userId);
 
-    // Update user subscription status and plan in the database
-    await userRef.update({
-        subscriptionPlan: newPlan,
-        subscriptionTier: newPlan,
-        subscriptionStatus: status,
-        subscriptionId: subscriptionId,
-        cancelAtPeriodEnd: cancelAtPeriodEnd,
-        cancelAt: cancelAt,
-    });
+  await userRef.update({
+      subscriptionPlan: newPlan,
+      subscriptionTier: newPlan,
+      subscriptionStatus: status,
+      subscriptionId: subscriptionId,
+      cancelAtPeriodEnd: cancelAtPeriodEnd,
+      cancelAt: cancelAt,
+  });
 
-    console.log(`User ${userId} subscription updated to ${newPlan} with status ${status}`);
+  console.log(`User ${userId} subscription updated to ${newPlan} with status ${status}`);
 }
 
 async function resetUserUsage(userId) {
@@ -68,32 +73,35 @@ const router = express.Router();
 
 // Create Stripe Checkout session
 router.post('/create-checkout-session', async (req, res) => {
-    const { plan, userId } = req.body;
+    const { planType, userId } = req.body;
+
+    if (!prices[planType]) {
+        return res.status(400).json({ error: 'Invalid plan type' });
+    }
+
     try {
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: [
                 {
-                    price: prices[plan],  // Use dynamic price based on the selected plan
+                    price: prices[planType],
                     quantity: 1,
                 },
             ],
             mode: 'subscription',
             subscription_data: {
-                metadata: {
-                    userId: userId,  // Attach the userId in subscription metadata as well
-                },
+                metadata: { userId: userId },
             },
             success_url: `${req.headers.origin || 'http://localhost:3000'}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${req.headers.origin || 'http://localhost:3000'}/cancel`,
         });
-
 
         res.json({ id: session.url });
     } catch (error) {
         res.status(500).send({ error: error.message });
     }
 });
+
 
 // Endpoint to cancel a user's subscription
 router.post('/cancel-subscription', async (req, res) => {
@@ -179,26 +187,24 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       {
         const invoice = event.data.object;
         const subscriptionId = invoice.subscription;
-
-        // Retrieve the subscription object to get the metadata
+    
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
         const userId = subscription.metadata.userId;
-
+    
         if (!userId) {
           throw new Error('userId is missing in the metadata');
         }
-
+    
         const plan = subscription.items.data[0].price.id;
         const subscriptionStatus = subscription.status;
-
-        // Reset tokens count and generated images
-        await resetUserUsage(userId);
-
-        // Update the user's subscription status and plan
+    
+        await resetUserUsage(userId); // Reset usage counts
+    
         await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId);
         console.log(`User ${userId} subscription renewed. Usage reset.`);
       }
       break;
+      
 
     case 'customer.subscription.deleted':
       {

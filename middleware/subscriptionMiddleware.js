@@ -2,16 +2,23 @@
 import admin from 'firebase-admin';
 
 const subscriptionLimits = {
-  free: 1000,
-  pro: 10000,
-  Premium: 10000000,
+  proWeekly: 2500,
+  proMonthly: 10000,
+  proYearly: 120000,
+  premiumWeekly: 5000,
+  premiumMonthly: 20000,
+  premiumYearly: 240000,
 };
 
 const imageGen = {
-  free: 100,
-  pro: 1000,
-  premium: 3000,
+  proWeekly: 250,
+  proMonthly: 1000,
+  proYearly: 12000,
+  premiumWeekly: 500,
+  premiumMonthly: 2000,
+  premiumYearly: 24000,
 };
+
 
 
 const subscriptionMiddleware = async (req, res, next) => {
@@ -25,29 +32,39 @@ const subscriptionMiddleware = async (req, res, next) => {
     }
 
     const userData = userDoc.data();
-    const subscriptionTier = (userData.subscriptionTier.toLowerCase()) || 'free';
+    const subscriptionTier = (userData.subscriptionTier || 'free').toLowerCase();
     const tokenCount = userData.tokenCount || 0;
-    const tokenLimit = subscriptionLimits[subscriptionTier];
     const imageCount = userData.imageGenerationCount || 0;
+
+    const tokenLimit = subscriptionLimits[subscriptionTier];
     const imageLimit = imageGen[subscriptionTier];
 
+    if (typeof tokenLimit === 'undefined' || typeof imageLimit === 'undefined') {
+      return res.status(403).json({ error: `Subscription tier "${subscriptionTier}" is invalid.` });
+    }
+
     if (imageCount >= imageLimit) {
-      return res.status(403).json({ error: 'Image limit exceeded.' });
+      return res.status(403).json({
+        error: `Image limit exceeded. Limit: ${imageLimit}, Used: ${imageCount}`,
+      });
     }
 
     if (tokenCount >= tokenLimit) {
-      return res.status(403).json({ error: 'Token limit exceeded.' });
+      return res.status(403).json({
+        error: `Token limit exceeded. Limit: ${tokenLimit}, Used: ${tokenCount}`,
+      });
     }
 
+    // Attach subscription data to the request for downstream processing
     req.user.subscriptionTier = subscriptionTier;
     req.user.tokenCount = tokenCount;
+    req.user.imageCount = imageCount;
 
     next();
   } catch (err) {
-    res
-      .status(500)
-      .json({ error: 'Subscription check failed.', details: err.message });
+    res.status(500).json({ error: 'Subscription check failed.', details: err.message });
   }
 };
 
 export default subscriptionMiddleware;
+
