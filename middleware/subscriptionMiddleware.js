@@ -2,6 +2,7 @@
 import admin from 'firebase-admin';
 
 const subscriptionLimits = {
+  free: 1000,
   proWeekly: 2500,
   proMonthly: 10000,
   proYearly: 120000,
@@ -11,6 +12,7 @@ const subscriptionLimits = {
 };
 
 const imageGen = {
+  free: 100,
   proWeekly: 250,
   proMonthly: 1000,
   proYearly: 12000,
