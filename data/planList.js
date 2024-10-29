@@ -10,16 +10,16 @@ export const planList = {
           "Limited AI Playground model selection"
         ]
       },
-      {
-        "name": "Pro Weekly",
-        "price": "$4.99/week",
-        "value": "proWeekly",
-        "features": [
-          "2.5 Million AI/ML Tokens or 250 Images",
-          "Access to Pro models in the AI playground",
-          "Serverless access to over 100 AI Models"
-        ]
-      },
+    //   {
+    //     "name": "Pro Weekly",
+    //     "price": "$4.99/week",
+    //     "value": "proWeekly",
+    //     "features": [
+    //       "2.5 Million AI/ML Tokens or 250 Images",
+    //       "Access to Pro models in the AI playground",
+    //       "Serverless access to over 100 AI Models"
+    //     ]
+    //   },
       {
         "name": "Pro Monthly",
         "price": "$15.00/month",
@@ -40,16 +40,16 @@ export const planList = {
           "Serverless access to over 100 AI Models"
         ]
       },
-      {
-        "name": "Premium Weekly",
-        "price": "$7.00/week",
-        "value": "premiumWeekly",
-        "features": [
-          "5 Million AI/ML Tokens or 500 Images",
-          "Access to Premium models in the AI playground",
-          "Serverless access to over 100 AI Models"
-        ]
-      },
+    //   {
+    //     "name": "Premium Weekly",
+    //     "price": "$7.00/week",
+    //     "value": "premiumWeekly",
+    //     "features": [
+    //       "5 Million AI/ML Tokens or 500 Images",
+    //       "Access to Premium models in the AI playground",
+    //       "Serverless access to over 100 AI Models"
+    //     ]
+    //   },
       {
         "name": "Premium Monthly",
         "price": "$20.00/month",
