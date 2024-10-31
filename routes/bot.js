@@ -214,7 +214,6 @@ router.delete("/delete-avatar/:botId", authMiddleware, async (req, res) => {
 });
 
 // Get all chats for a bot
-
 router.get("/:botId/chats", botApiKeyMiddleware, async (req, res) => {
   try {
     const { botId } = req.params;
@@ -229,10 +228,14 @@ router.get("/:botId/chats", botApiKeyMiddleware, async (req, res) => {
 
     // Retrieve all chats for the specified bot
     const chatsSnapshot = await chatsRef.get();
-    const chats = chatsSnapshot.docs.map((doc) => ({
-      chatId: doc.id,
-      ...doc.data(),
-    }));
+    const chats = chatsSnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        chatId: doc.id,
+        ...data,
+        status: data.status || "unrequested" // Default to "unrequested" if status is missing
+      };
+    });
 
     if (chats.length === 0) {
       return res.status(404).json({ message: "No chats found for this bot." });
@@ -245,6 +248,7 @@ router.get("/:botId/chats", botApiKeyMiddleware, async (req, res) => {
       .json({ error: "Failed to retrieve chats.", details: err.message });
   }
 });
+
 
 router.get("/:botId/chat/:chatId", botApiKeyMiddleware, async (req, res) => {
   try {
