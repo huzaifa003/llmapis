@@ -45,13 +45,29 @@ router.get("/approval-chats/pending", authMiddleware, adminMiddleware, async (re
       const pendingChatsRef = db.collection("approvalChats").where("status", "==", "pending");
   
       const snapshot = await pendingChatsRef.get();
-      const pendingChats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  
+      // Use Promise.all to wait for all asynchronous operations inside the map
+      const pendingChats = await Promise.all(
+        snapshot.docs.map(async (doc) => {
+          const data = doc.data();
+          console.log(data);
+          const userRecord = await admin.auth().getUser(data.userId); // Fetch user email asynchronously
+          return {
+            id: doc.id,
+            ...data,
+            email: userRecord.email,
+          };
+        })
+      );
+
+      console.log(pendingChats);
   
       res.json({ pendingChats });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch pending chats", details: error.message });
     }
   });
+  
   
 // Approve a chat and update original chat status in bots collection
 router.patch("/approval-chats/:chatId/approve", authMiddleware, adminMiddleware, async (req, res) => {

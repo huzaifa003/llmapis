@@ -344,14 +344,17 @@ router.patch("/:botId/chat/:chatId/set-pending", botApiKeyMiddleware, async (req
       status: "pending"
     });
 
+    const chatData = chatDoc.data();
+    
     // Add the chat to the approvalChats collection
     const approvalChatsRef = db.collection("approvalChats").doc(chatId);
     await approvalChatsRef.set({
+      userId: req.bot.ownerUserId,
       botId,
       chatId,
       status: "pending",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      name: chatDoc.data().name || "Untitled Chat"
+      name: chatData.name || "Untitled Chat"
     });
 
     res.json({ message: `Chat ${chatId} status set to pending and added to approvalChats`, chatId });
