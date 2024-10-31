@@ -1055,6 +1055,38 @@ var_dump($result);
   }
 );
 
+router.get('/get-bot-info', botApiKeyMiddleware, async (req, res) => {
+  try {
+    
+    let botId = req.bot.botId;
+    
+
+    if (!botId) {
+      return res.status(400).json({ error: 'Bot ID not provided' });
+    }
+    
+    const { apiKey } = req.bot;
+    const db = admin.firestore();
+
+    const botRef = db.collection('bots').doc(botId);
+    const botSnapshot = await botRef.get();
+
+    if (!botSnapshot.exists) {
+      return res.status(404).json({ error: 'Bot not found' });
+    }
+
+    const botData = botSnapshot.data();
+    
+    res.send({
+      ...botData,
+      apiKey
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: 'Failed to get bot info' });
+  }
+})
+
 router.get("/:botId/chat/:chatId/widget", async (req, res) => {
   const { botId, chatId } = req.params;
   const { apiKey, modelName } = req.query;
@@ -1250,7 +1282,9 @@ router.get("/:botId/chat/:chatId/widget", async (req, res) => {
     const botId = '${botId}';
     const chatId = '${chatId}';
     const modelName = '${modelName}';
-
+    const url = https://storage.googleapis.com/llms-d6b5b.appspot.com/
+    let botAvatarUrl = url + llms-d6b5b.appspot.com + botId + '/avatar/avatar.png';
+    
     let conversationHistory = [];
     let streamingBubble = null;
 
