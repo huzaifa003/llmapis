@@ -316,6 +316,52 @@ router.post("/:botId/chat/start", botApiKeyMiddleware, async (req, res) => {
   }
 });
 
+// Update chat status to 'pending' for a specific chat in a bot and add to approvalChats
+router.patch("/:botId/chat/:chatId/set-pending", botApiKeyMiddleware, async (req, res) => {
+  try {
+    const { botId, chatId } = req.params;
+
+    // Ensure the botId matches the authenticated bot
+    if (botId !== req.bot.botId) {
+      return res.status(403).json({ error: "Bot ID mismatch" });
+    }
+
+    const db = admin.firestore();
+    const chatRef = db.collection("bots").doc(botId).collection("chats").doc(chatId);
+
+    // Check if the chat exists
+    const chatDoc = await chatRef.get();
+    if (!chatDoc.exists) {
+      return res.status(404).json({ error: "Chat not found" });
+    }
+
+    // Update the chat document with 'pending' status
+    await chatRef.update({
+      status: "pending"
+    });
+
+    // Add the chat to the approvalChats collection
+    const approvalChatsRef = db.collection("approvalChats").doc(chatId);
+    await approvalChatsRef.set({
+      botId,
+      chatId,
+      status: "pending",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      name: chatDoc.data().name || "Untitled Chat"
+    });
+
+    res.json({ message: `Chat ${chatId} status set to pending and added to approvalChats`, chatId });
+  } catch (error) {
+    res.status(500).json({
+      error: "Failed to set chat status to pending and add to approvalChats",
+      details: error.message
+    });
+  }
+});
+
+
+
+
 router.get(
   "/:botId/chat/:chatId/embed",
   botApiKeyMiddleware,

@@ -8,6 +8,7 @@ import chatRoutes from './routes/chat.js'
 import paymentRoutes from './routes/payment.js';
 import modelRoutes from './routes/model.js'
 import fs from 'fs';  // Use fs to read the JSON file
+import adminRoutes from './routes/admin.js';
 import logging from './middleware/logger.js';
 
 dotenv.config();
@@ -34,6 +35,7 @@ app.use((req, res, next) => {
     }
   });
 
+app.use('/admin', adminRoutes);
 app.use('/auth', authRoutes);
 app.use('/api/bot', botRoutes);
 app.use('/api/chat', chatRoutes);
