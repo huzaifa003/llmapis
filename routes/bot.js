@@ -1161,7 +1161,7 @@ router.get("/:botId/chat/:chatId/widget", async (req, res) => {
       border-radius: 50%;
       margin-right: 15px;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-      display:none
+    
     }
 
     .message-bubble {
@@ -1282,8 +1282,8 @@ router.get("/:botId/chat/:chatId/widget", async (req, res) => {
     const botId = '${botId}';
     const chatId = '${chatId}';
     const modelName = '${modelName}';
-    const url = https://storage.googleapis.com/llms-d6b5b.appspot.com/
-    let botAvatarUrl = url + llms-d6b5b.appspot.com + botId + '/avatar/avatar.png';
+    const url = 'https://storage.googleapis.com/llms-d6b5b.appspot.com/'
+    let botAvatarUrl = url + 'llms-d6b5b.appspot.com' + botId + '/avatar/avatar.png';
     
     let conversationHistory = [];
     let streamingBubble = null;
@@ -1307,45 +1307,51 @@ router.get("/:botId/chat/:chatId/widget", async (req, res) => {
 
 
     let accumulatedContent = '';
-    function appendMessage(content, className, avatarUrl, isStreaming = false, isImage = false) {
-      if (isStreaming && streamingBubble) {
-        
-        accumulatedContent += String(content);
+  function appendMessage(content, className, avatarUrl, isStreaming = false, isImage = false) {
+  let avatar; // Declare avatar at the function scope
+  let messageWrapper;
+  let messageBubble;
 
-        // Re-parse the entire accumulated content
-        streamingBubble.innerHTML = marked.parse(accumulatedContent);
+  if (isStreaming && streamingBubble) {
+    accumulatedContent += String(content);
 
-        // Scroll to the bottom
-        chatBox.scrollTop = chatBox.scrollHeight;
-        
-      } else {
-        const messageWrapper = document.createElement('div');
-        messageWrapper.classList.add('message-wrapper', className, 'fade-in');
+    // Re-parse the entire accumulated content
+    streamingBubble.innerHTML = marked.parse(accumulatedContent);
 
-        const avatar = document.createElement('img');
-        avatar.classList.add('avatar');
-        avatar.src = avatarUrl;
+    // Scroll to the bottom
+    chatBox.scrollTop = chatBox.scrollHeight;
 
-        const messageBubble = document.createElement('div');
-        messageBubble.classList.add('message-bubble', className);
+  } else {
+    messageWrapper = document.createElement('div');
+    messageWrapper.classList.add('message-wrapper', className, 'fade-in');
 
-        if (isStreaming) {
-          accumulatedContent = '';
-          streamingBubble = messageBubble;
-        }
+    avatar = document.createElement('img');
+    avatar.classList.add('avatar');
+    avatar.src = avatarUrl;
 
-        if (isImage) {
-          messageBubble.innerHTML = '<img src="' + content + '" alt="Generated Image" width="200"/>';
-        } else {
-          messageBubble.innerHTML = content;
-        }
+    messageBubble = document.createElement('div');
+    messageBubble.classList.add('message-bubble', className);
 
-        messageWrapper.appendChild(avatar);
-        messageWrapper.appendChild(messageBubble);
-        chatBox.appendChild(messageWrapper);
-        chatBox.scrollTop = chatBox.scrollHeight;
-      }
+    if (isStreaming) {
+      accumulatedContent = '';
+      streamingBubble = messageBubble;
     }
+
+    if (isImage) {
+      messageBubble.innerHTML = '<img src="' + content + '" alt="Generated Image" width="200"/>';
+    } else {
+      messageBubble.innerHTML = content;
+    }
+
+    if (className === 'bot') {
+      messageWrapper.appendChild(avatar);
+    }
+
+    messageWrapper.appendChild(messageBubble);
+    chatBox.appendChild(messageWrapper);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+}
 
    async function pollForImage(imageId) {
   const imageApiUrl = '${process.env.BACKEND_URL}/api/bot/get_images';
@@ -1370,11 +1376,11 @@ router.get("/:botId/chat/:chatId/widget", async (req, res) => {
       if (imageData.status === 'success') {
         const imageUrl = imageData.output[0];
         imageWrapper.parentNode.removeChild(imageWrapper);
-        appendMessage(imageUrl, 'bot', 'bot-avatar.png', false, true);
+        appendMessage(imageUrl, 'bot', 'botAvatarUrl', false, true);
         imageGenerated = true;
       } else if (imageData.status === 'error') {
         imageWrapper.parentNode.removeChild(imageWrapper);
-        appendMessage('Error generating image.', 'bot', 'bot-avatar.png');
+        appendMessage('Error generating image.', 'bot', 'botAvatarUrl');
         imageGenerated = true;
       }
     }
@@ -1411,17 +1417,17 @@ async function fetchImage(imageId) {
       const imageWrapper = chatBox.querySelector('.loading-spinner').parentNode;
         const imageUrl = imageData.response; // Assuming response is now directly a URL
         imageWrapper.parentNode.removeChild(imageWrapper);
-        appendMessage(imageUrl, 'bot', 'bot-avatar.png', false, true); // Image displayed
+        appendMessage(imageUrl, 'bot', botAvatarUrl, false, true); // Image displayed
     } 
       else {
         imageWrapper.parentNode.removeChild(imageWrapper);
-        appendMessage('Error generating image.', 'bot', 'bot-avatar.png'); // Handle error
+        appendMessage('Error generating image.', 'bot', botAvatarUrl); // Handle error
       }
   } catch (error) {
     const imageWrapper = chatBox.querySelector('.loading-spinner').parentNode;
     imageWrapper.parentNode.removeChild(imageWrapper);
     console.error('Error:', error);
-    appendMessage('Error generating image.', 'bot', 'bot-avatar.png');
+    appendMessage('Error generating image.', 'bot', botAvatarUrl);
   }
 }
 
@@ -1437,7 +1443,7 @@ async function fetchImage(imageId) {
 
         if (value) {
           const chunk = decoder.decode(value, { stream: true });
-          appendMessage(chunk, 'bot', 'bot-avatar.png', true);
+          appendMessage(chunk, 'bot', botAvatarUrl, true);
         }
       }
 
@@ -1447,7 +1453,7 @@ async function fetchImage(imageId) {
     function sendMessage() {
       const userMessage = chatInput.value;
       if (userMessage.trim()) {
-        appendMessage(userMessage, 'user', 'user-avatar.png');
+        appendMessage(userMessage, 'user','');
         chatInput.value = '';
         sendButton.disabled = true;
 
@@ -1455,7 +1461,7 @@ async function fetchImage(imageId) {
 if(modelName.startsWith('imagegen:') || modelName.startsWith('dalle:')){
 
 const loadingSpinnerHtml = '<div class="loading-spinner"></div>';
-           appendMessage(loadingSpinnerHtml, 'bot', 'bot-avatar.png');
+           appendMessage(loadingSpinnerHtml, 'bot', botAvatarUrl);
 }
         if (modelName.startsWith('imagegen:') || modelName.startsWith('dalle:')) {
           
@@ -1475,13 +1481,13 @@ const loadingSpinnerHtml = '<div class="loading-spinner"></div>';
               const imageUrl = data.response;
            const imageWrapper = chatBox.querySelector('.loading-spinner').parentNode;
             imageWrapper.parentNode.removeChild(imageWrapper);
-              appendMessage(imageUrl, 'bot', 'bot-avatar.png', false, true);
+              appendMessage(imageUrl, 'bot', botAvatarUrl, false, true);
 
             }
           })
           .catch(error => {
             console.error('Error generating image:', error);
-            appendMessage('Error generating image.', 'bot', 'bot-avatar.png');
+            appendMessage('Error generating image.', 'bot', botAvatarUrl);
           });
         } else {
           fetch(apiUrl, {
@@ -1498,7 +1504,7 @@ const loadingSpinnerHtml = '<div class="loading-spinner"></div>';
           })
           .catch(error => {
             console.error('Error streaming response:', error);
-            appendMessage('Error communicating with the bot.', 'bot', 'bot-avatar.png');
+            appendMessage('Error communicating with the bot.', 'bot', botAvatarUrl);
           });
         }
       }
