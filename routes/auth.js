@@ -291,23 +291,42 @@ router.get('/get-user', authMiddleware, async (req, res) => {
 router.get('/get-users', authMiddleware, async (req, res) => {
   try {
     const db = admin.firestore();
+    const auth = admin.auth();
     const usersRef = db.collection('users');
-    const users = await usersRef.get().then((querySnapshot) => {
-      const users = [];
-      querySnapshot.forEach((doc) => {
-        users.push({
-          id: doc.id,
-          ...doc.data(),
-        });
-      });
-      res.send(users)
-    })
+
+    const querySnapshot = await usersRef.get();
+    const users = await Promise.all(
+      querySnapshot.docs.map(async (doc) => {
+        const userData = doc.data();
+
+        
+        
+        try {
+          const userRecord = await auth.getUser(doc.id);
+          return {
+            id: doc.id,
+            ...userData,
+            email: userRecord.email, // Adding email from Firebase Auth
+          };
+        } catch (authError) {
+          console.error(`Error fetching email for UID: ${doc.id}`, authError);
+          return {
+            id: doc.id,
+            ...userData,
+            email: null, // Return null or handle accordingly if email is unavailable
+          };
+        }
+      })
+    );
+
+    res.send(users);
   } catch (err) {
     res
       .status(500)
       .json({ error: 'Failed to process message.', details: err.message });
   }
-})
+});
+
 
 
 router.post('/update-user', authMiddleware, async (req, res) => {
