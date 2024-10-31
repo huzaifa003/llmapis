@@ -60,7 +60,6 @@ router.get("/approval-chats/pending", authMiddleware, adminMiddleware, async (re
         })
       );
 
-      console.log(pendingChats);
   
       res.json({ pendingChats });
     } catch (error) {

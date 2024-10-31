@@ -350,6 +350,7 @@ router.patch("/:botId/chat/:chatId/set-pending", botApiKeyMiddleware, async (req
     const approvalChatsRef = db.collection("approvalChats").doc(chatId);
     await approvalChatsRef.set({
       userId: req.bot.ownerUserId,
+      apiKey: req.bot.apiKey,
       botId,
       chatId,
       status: "pending",
