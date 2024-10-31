@@ -53,45 +53,66 @@ router.get("/approval-chats/pending", authMiddleware, adminMiddleware, async (re
     }
   });
   
-  // Approve a chat
+// Approve a chat and update original chat status in bots collection
 router.patch("/approval-chats/:chatId/approve", authMiddleware, adminMiddleware, async (req, res) => {
-try {
-    const { chatId } = req.params;
-    const db = admin.firestore();
-    const chatRef = db.collection("approvalChats").doc(chatId);
-
-    const chatDoc = await chatRef.get();
-    if (!chatDoc.exists) {
-    return res.status(404).json({ error: "Chat not found" });
+    try {
+      const { chatId } = req.params;
+      const db = admin.firestore();
+      const approvalChatRef = db.collection("approvalChats").doc(chatId);
+  
+      const approvalChatDoc = await approvalChatRef.get();
+      if (!approvalChatDoc.exists) {
+        return res.status(404).json({ error: "Chat not found in approvalChats" });
+      }
+  
+      // Update status to 'approved' in approvalChats collection
+      await approvalChatRef.update({ status: "approved" });
+  
+      // Also update the status in the corresponding bot's chat document
+      const { botId } = approvalChatDoc.data();
+      const botChatRef = db.collection("bots").doc(botId).collection("chats").doc(chatId);
+  
+      const botChatDoc = await botChatRef.get();
+      if (botChatDoc.exists) {
+        await botChatRef.update({ status: "approved" });
+      }
+  
+      res.json({ message: `Chat ${chatId} approved and updated in bot's collection` });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to approve chat", details: error.message });
     }
-
-    await chatRef.update({ status: "approved" });
-
-    res.json({ message: `Chat ${chatId} approved` });
-} catch (error) {
-    res.status(500).json({ error: "Failed to approve chat", details: error.message });
-}
-});
-
-// Disapprove a chat
-router.patch("/approval-chats/:chatId/disapprove", authMiddleware, adminMiddleware, async (req, res) => {
-try {
-    const { chatId } = req.params;
-    const db = admin.firestore();
-    const chatRef = db.collection("approvalChats").doc(chatId);
-
-    const chatDoc = await chatRef.get();
-    if (!chatDoc.exists) {
-    return res.status(404).json({ error: "Chat not found" });
+  });
+  
+  // Disapprove a chat and update original chat status in bots collection
+  router.patch("/approval-chats/:chatId/disapprove", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const { chatId } = req.params;
+      const db = admin.firestore();
+      const approvalChatRef = db.collection("approvalChats").doc(chatId);
+  
+      const approvalChatDoc = await approvalChatRef.get();
+      if (!approvalChatDoc.exists) {
+        return res.status(404).json({ error: "Chat not found in approvalChats" });
+      }
+  
+      // Update status to 'disapproved' in approvalChats collection
+      await approvalChatRef.update({ status: "disapproved" });
+  
+      // Also update the status in the corresponding bot's chat document
+      const { botId } = approvalChatDoc.data();
+      const botChatRef = db.collection("bots").doc(botId).collection("chats").doc(chatId);
+  
+      const botChatDoc = await botChatRef.get();
+      if (botChatDoc.exists) {
+        await botChatRef.update({ status: "disapproved" });
+      }
+  
+      res.json({ message: `Chat ${chatId} disapproved and updated in bot's collection` });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to disapprove chat", details: error.message });
     }
-
-    await chatRef.update({ status: "disapproved" });
-
-    res.json({ message: `Chat ${chatId} disapproved` });
-} catch (error) {
-    res.status(500).json({ error: "Failed to disapprove chat", details: error.message });
-}
-});
+  });
+  
 
 // Create a chat in approvalChats collection with pending status
 router.post("/approval-chats/create", authMiddleware, adminMiddleware, async (req, res) => {
