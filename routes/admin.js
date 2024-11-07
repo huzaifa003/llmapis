@@ -3,18 +3,23 @@ import express from 'express';
 import admin from 'firebase-admin';
 import adminMiddleware from '../middleware/adminMiddleware.js';
 import authMiddleware from '../middleware/authMiddleware.js';
-import modemailer from 'nodemailer';
+import nodemailer from 'nodemailer';
+
+import dotnev from "dotenv";
+dotnev.config();
 
 const router = express.Router();
-const transporter = modemailer.createTransport({
-  service: 'smtp.gmail.com',
+
+const transporter = nodemailer.createTransport({
+  service: "Gmail",
+  host: "smtp.gmail.com",
   port: 465,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+    pass: process.env.EMAIL_PASS,
   },
+  secure: true,
 })
-  
 
 // admin.js
 /**
@@ -106,20 +111,38 @@ router.patch("/approval-chats/:chatId/approve", authMiddleware, adminMiddleware,
         const mailData = {
           from: process.env.EMAIL_USER,
           to: userRecord.email,
-          subject: 'Chat approved',
-          text: 'Your chat has been approved'
-        }
+          subject: '🎉 Congratulations! Your Chat Approval is Complete 🎉',
+          html: `
+            <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
+              <h2 style="color: #4CAF50; text-align: center;">Congratulations, ${userRecord.displayName || 'User'}!</h2>
+              <p style="font-size: 16px; line-height: 1.5;">
+                We are excited to let you know that your chat request has been <strong>approved</strong> by <span style="color: #4CAF50; font-weight: bold;">Model Leap</span>! 🎉
+              </p>
+              <p style="font-size: 16px; line-height: 1.5;">
+                You can now engage in your chat and connect with others. We hope this feature adds great value to your experience with Model Leap.
+              </p>
+              <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+              <p style="font-size: 14px; color: #777;">
+                Best wishes,<br>
+                The <strong>Model Leap</strong> Team
+              </p>
+              <footer style="text-align: center; margin-top: 20px; font-size: 12px; color: #aaa;">
+                <p>© ${new Date().getFullYear()} Model Leap. All rights reserved.</p>
+              </footer>
+            </div>
+          `
+        };
         transporter.sendMail(mailData, function(error, info){
           if (error) {
             console.log(error);
           } else {
             console.log('Email sent: ' + info.response);
           }
-        })
-      }
-      else {
+        });
+    } else {
         console.log("No user ID found in approval chat document");
-      }
+    }
+    
       
       res.json({ message: `Chat ${chatId} approved and updated in bot's collection` });
     } catch (error) {
@@ -130,7 +153,8 @@ router.patch("/approval-chats/:chatId/approve", authMiddleware, adminMiddleware,
   // Disapprove a chat and update original chat status in bots collection
   router.patch("/approval-chats/:chatId/disapprove", authMiddleware, adminMiddleware, async (req, res) => {
     try {
-      const { chatId, disapproveReason } = req.params;
+      const { chatId } = req.params;
+      const { disapproveReason } = req.body;
       const db = admin.firestore();
       const approvalChatRef = db.collection("approvalChats").doc(chatId);
   
@@ -161,22 +185,43 @@ router.patch("/approval-chats/:chatId/approve", authMiddleware, adminMiddleware,
         const mailData = {
           from: process.env.EMAIL_USER,
           to: userRecord.email,
-          subject: 'Chat disapproved',
-          text: `Your chat has been disapproved for the reason of ${disapproveReason}`
-        }
+          subject: '🚫 Chat Disapproved - Model Leap Notification',
+          html: `
+            <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
+              <h2 style="color: #d9534f; text-align: center;">Chat Disapproval Notice</h2>
+              <p style="font-size: 16px; line-height: 1.5;">
+                Dear ${userRecord.displayName || 'User'},
+              </p>
+              <p style="font-size: 16px; line-height: 1.5;">
+                We regret to inform you that your chat request has been <strong>disapproved</strong> by <span style="color: #d9534f; font-weight: bold;">Model Leap</span>.
+              </p>
+              <p style="font-size: 16px; line-height: 1.5; color: #555;">
+                Reason for disapproval: <strong>${disapproveReason}</strong>
+              </p>
+              <p style="font-size: 16px; line-height: 1.5;">
+                If you have any questions or require further clarification, please feel free to reach out to our support team. We encourage you to review the guidelines and re-submit your chat for approval if appropriate.
+              </p>
+              <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+              <p style="font-size: 14px; color: #777;">
+                Best regards,<br>
+                The <strong>Model Leap</strong> Team
+              </p>
+              <footer style="text-align: center; margin-top: 20px; font-size: 12px; color: #aaa;">
+                <p>© ${new Date().getFullYear()} Model Leap. All rights reserved.</p>
+              </footer>
+            </div>
+          `
+        };
         transporter.sendMail(mailData, function(error, info){
           if (error) {
             console.log(error);
           } else {
             console.log('Email sent: ' + info.response);
           }
-        })
-      }
-      else {
+        });
+    } else {
         console.log("No user ID found in approval chat document");
-      }
-
-  
+    }
       res.json({ message: `Chat ${chatId} disapproved and updated in bot's collection` });
     } catch (error) {
       res.status(500).json({ error: "Failed to disapprove chat", details: error.message });
@@ -225,4 +270,64 @@ try {
 }
 });
 
+
+router.post('/contact-us', async (req, res) => {
+  try {
+    const { name, email, message } = req.body;
+
+    const db = admin.firestore();
+    const contactRef = await db.collection("contact-us").add({
+      name,
+      email,
+      message,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    const emailData = {
+      from: process.env.EMAIL_USER,
+      to: process.env.ADMIN_EMAIL,
+      subject: 'Contact Us Message',
+      html: `
+        <h2 style="color: #d9534f; text-align: center;">Contact Us Message</h2>
+        <p style="font-size: 16px; line-height: 1.5;">
+          Name: ${name}
+        </p>
+        <p style="font-size: 16px; line-height: 1.5;">
+          Email: ${email}
+        </p>
+        <p style="font-size: 16px; line-height: 1.5;">
+          Message: ${message}
+        </p>
+      `
+    };
+    transporter.sendMail(emailData, function(error, info){
+      if (error) {
+        console.log(error);
+      } else {
+        console.log('Email sent: ' + info.response);
+      }
+    });
+
+    transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Contact Us Message',
+      html: `
+        <h2 style="color: #4CAF50; text-align: center;">Contact Us Message</h2>
+        <p style="font-size: 16px; line-height: 1.5;">
+          Thank you ${name} for reaching out to us. We will get back to you as soon as possible.
+        </p>
+      `
+    }, function(error, info){
+      if (error) {
+        console.log(error);
+      } else {
+        console.log('Email sent: ' + info.response);
+      }
+    })
+    res.json({ message: "Message sent successfully", contactId: contactRef.id });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to send message", details: error.message });
+  }
+});
 export default router;

@@ -25,17 +25,21 @@ import multer from "multer";
 
 import nodemailer from "nodemailer";
 
+import dotnev from "dotenv";
+dotnev.config();
+
 // routes/bot.js
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() }); // Store the file in memory
 const transporter = nodemailer.createTransport({
-  service: "smtp.gmail.com",
+  service: "Gmail",
+  host: "smtp.gmail.com",
   port: 465,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  
+  secure: true,
 })
 
 
@@ -336,8 +340,9 @@ router.post("/:botId/chat/start", botApiKeyMiddleware, async (req, res) => {
 // Update chat status to 'pending' for a specific chat in a bot and add to approvalChats
 router.patch("/:botId/chat/:chatId/set-pending", botApiKeyMiddleware, async (req, res) => {
   try {
-    const { botId, chatId, systemContext } = req.params;
+    const { botId, chatId } = req.params;
     const userId = req.bot.ownerUserId;
+    const systemContext = req.bot.systemContext;
 
     if (!userId) {
       return res.status(403).json({ error: "User ID not found" });
@@ -352,8 +357,8 @@ router.patch("/:botId/chat/:chatId/set-pending", botApiKeyMiddleware, async (req
 
     transporter.sendMail({
       from: process.env.EMAIL_USER,
-      to: userEmail,
-      subject: "Chat Request",
+      to: process.env.ADMIN_EMAIL,
+      subject: `Chat Request from user ${userEmail}`,
       html: `<h1>Chat Request</h1><p>Bot: ${botId}</p><p>Chat: ${chatId} with context ${systemContext} </p>`,
     })
     // Ensure the botId matches the authenticated bot
@@ -382,6 +387,7 @@ router.patch("/:botId/chat/:chatId/set-pending", botApiKeyMiddleware, async (req
     await approvalChatsRef.set({
       userId: req.bot.ownerUserId,
       apiKey: req.bot.apiKey,
+      systemContext: systemContext,
       botId,
       chatId,
       status: "pending",
