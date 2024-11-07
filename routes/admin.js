@@ -3,8 +3,18 @@ import express from 'express';
 import admin from 'firebase-admin';
 import adminMiddleware from '../middleware/adminMiddleware.js';
 import authMiddleware from '../middleware/authMiddleware.js';
+import modemailer from 'nodemailer';
 
 const router = express.Router();
+const transporter = modemailer.createTransport({
+  service: 'smtp.gmail.com',
+  port: 465,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  },
+})
+  
 
 // admin.js
 /**
@@ -84,14 +94,33 @@ router.patch("/approval-chats/:chatId/approve", authMiddleware, adminMiddleware,
       await approvalChatRef.update({ status: "approved" });
   
       // Also update the status in the corresponding bot's chat document
-      const { botId } = approvalChatDoc.data();
+      const { botId, userId } = approvalChatDoc.data();
       const botChatRef = db.collection("bots").doc(botId).collection("chats").doc(chatId);
-  
+      
       const botChatDoc = await botChatRef.get();
       if (botChatDoc.exists) {
         await botChatRef.update({ status: "approved" });
       }
-  
+      if (userId) {
+        const userRecord = await admin.auth().getUser(userId);
+        const mailData = {
+          from: process.env.EMAIL_USER,
+          to: userRecord.email,
+          subject: 'Chat approved',
+          text: 'Your chat has been approved'
+        }
+        transporter.sendMail(mailData, function(error, info){
+          if (error) {
+            console.log(error);
+          } else {
+            console.log('Email sent: ' + info.response);
+          }
+        })
+      }
+      else {
+        console.log("No user ID found in approval chat document");
+      }
+      
       res.json({ message: `Chat ${chatId} approved and updated in bot's collection` });
     } catch (error) {
       res.status(500).json({ error: "Failed to approve chat", details: error.message });
@@ -119,13 +148,34 @@ router.patch("/approval-chats/:chatId/approve", authMiddleware, adminMiddleware,
       
   
       // Also update the status in the corresponding bot's chat document
-      const { botId } = approvalChatDoc.data();
+      const { botId, userId } = approvalChatDoc.data();
       const botChatRef = db.collection("bots").doc(botId).collection("chats").doc(chatId);
   
       const botChatDoc = await botChatRef.get();
       if (botChatDoc.exists) {
-        await botChatRef.update({ status: "disapproved" });
+        await botChatRef.update({ status: "disapproved", disapproveReason });
       }
+
+      if (userId) {
+        const userRecord = await admin.auth().getUser(userId);
+        const mailData = {
+          from: process.env.EMAIL_USER,
+          to: userRecord.email,
+          subject: 'Chat disapproved',
+          text: `Your chat has been disapproved for the reason of ${disapproveReason}`
+        }
+        transporter.sendMail(mailData, function(error, info){
+          if (error) {
+            console.log(error);
+          } else {
+            console.log('Email sent: ' + info.response);
+          }
+        })
+      }
+      else {
+        console.log("No user ID found in approval chat document");
+      }
+
   
       res.json({ message: `Chat ${chatId} disapproved and updated in bot's collection` });
     } catch (error) {
