@@ -101,7 +101,7 @@ router.patch("/approval-chats/:chatId/approve", authMiddleware, adminMiddleware,
   // Disapprove a chat and update original chat status in bots collection
   router.patch("/approval-chats/:chatId/disapprove", authMiddleware, adminMiddleware, async (req, res) => {
     try {
-      const { chatId } = req.params;
+      const { chatId, disapproveReason } = req.params;
       const db = admin.firestore();
       const approvalChatRef = db.collection("approvalChats").doc(chatId);
   
@@ -111,7 +111,12 @@ router.patch("/approval-chats/:chatId/approve", authMiddleware, adminMiddleware,
       }
   
       // Update status to 'disapproved' in approvalChats collection
-      await approvalChatRef.update({ status: "disapproved" });
+      if (!disapproveReason) {
+        return res.status(400).json({ error: "Disapprove reason is required" });
+      }
+    
+      await approvalChatRef.update({ status: "disapproved", disapproveReason });
+      
   
       // Also update the status in the corresponding bot's chat document
       const { botId } = approvalChatDoc.data();
