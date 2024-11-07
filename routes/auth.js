@@ -343,6 +343,33 @@ router.post('/update-user', authMiddleware, async (req, res) => {
   }
 })
 
+
+router.delete('/delete-user/:uid', authMiddleware, async (req, res) => {
+  const { uid } = req.params; // Get UID from URL params
+
+  if (!uid) {
+    return res.status(400).json({ error: 'UID is required to delete a user.' });
+  }
+
+  try {
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(uid);
+
+    // Check if the user document exists before attempting to delete
+    const userDoc = await userRef.get();
+    if (userDoc.exists) {
+      await userRef.delete();
+      res.status(200).json({ message: 'User deleted successfully.' });
+    } else {
+      res.status(404).json({ message: 'No user found for this UID.' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete user.', details: err.message });
+  }
+});
+
+
+
 router.post('/update-subscription', authMiddleware, async (req, res) => {
   try {
     const db = admin.firestore();
