@@ -15,7 +15,7 @@ const router = express.Router();
 
 
 // Start a new chat session
-router.post('/start', authMiddleware, apiKeyMiddleware, async (req, res) => {
+router.post('/start', authMiddleware,  async (req, res) => {
     try {
         const { name } = req.body;  // Get the chat name from the request body
 
@@ -291,7 +291,7 @@ router.post(
 router.post(
     '/message',
     authMiddleware,
-    apiKeyMiddleware,
+    
     subscriptionMiddleware,
     async (req, res) => {
 
