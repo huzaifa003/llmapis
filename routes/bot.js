@@ -23,9 +23,22 @@ import { v4 as uuidv4 } from "uuid";
 
 import multer from "multer";
 
+import nodemailer from "nodemailer";
+
 // routes/bot.js
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() }); // Store the file in memory
+const transporter = nodemailer.createTransport({
+  service: "smtp.gmail.com",
+  port: 465,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+  
+})
+
+
 router.post("/", authMiddleware, async (req, res) => {
   try {
     const { botName, systemContext, modelName, kwargs } = req.body;
@@ -323,8 +336,26 @@ router.post("/:botId/chat/start", botApiKeyMiddleware, async (req, res) => {
 // Update chat status to 'pending' for a specific chat in a bot and add to approvalChats
 router.patch("/:botId/chat/:chatId/set-pending", botApiKeyMiddleware, async (req, res) => {
   try {
-    const { botId, chatId } = req.params;
+    const { botId, chatId, systemContext } = req.params;
+    const userId = req.bot.ownerUserId;
 
+    if (!userId) {
+      return res.status(403).json({ error: "User ID not found" });
+    }
+
+    const user = await admin.auth().getUser(userId);
+    const userEmail = user.email;
+
+    if (!userEmail) {
+      return res.status(403).json({ error: "User not found" });
+    }
+
+    transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: userEmail,
+      subject: "Chat Request",
+      html: `<h1>Chat Request</h1><p>Bot: ${botId}</p><p>Chat: ${chatId} with context ${systemContext} </p>`,
+    })
     // Ensure the botId matches the authenticated bot
     if (botId !== req.bot.botId) {
       return res.status(403).json({ error: "Bot ID mismatch" });
