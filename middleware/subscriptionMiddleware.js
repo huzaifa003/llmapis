@@ -34,7 +34,7 @@ const subscriptionMiddleware = async (req, res, next) => {
     }
 
     const userData = userDoc.data();
-    const subscriptionTier = (userData.subscriptionTier || 'free').toLowerCase();
+    let subscriptionTier = (userData.subscriptionTier || 'free');
     const tokenCount = userData.tokenCount || 0;
     const imageCount = userData.imageGenerationCount || 0;
 
@@ -58,6 +58,7 @@ const subscriptionMiddleware = async (req, res, next) => {
     }
 
     // Attach subscription data to the request for downstream processing
+    subscriptionTier = subscriptionTier.toLowerCase();
     req.user.subscriptionTier = subscriptionTier;
     req.user.tokenCount = tokenCount;
     req.user.imageCount = imageCount;
