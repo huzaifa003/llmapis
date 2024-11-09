@@ -6,7 +6,7 @@ import { calculateTokensUsedLangChain } from '../utils/tokenUtils.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import apiKeyMiddleware from '../middleware/apiKeyMiddleware.js';
 import { getModelInstance, incrementTimestamp } from '../services/langchainServices.js';
-import { fetchImg, generateImage } from '../services/stableDiffusionService.js';
+import { fetchImg, generateDalleImg, generateImage } from '../services/stableDiffusionService.js';
 import { modelsData, imageModelsData } from '../data/modelList.js';
 import { generateApiKey } from '../services/apiKeyGenerator.js';
 import botApiKeyMiddleware from '../middleware/botApiKeyMiddleware.js';
@@ -291,16 +291,12 @@ router.post(
 router.post(
     '/message',
     authMiddleware,
-    
     subscriptionMiddleware,
     async (req, res) => {
-
         const { modelName, message } = req.body;
-
 
         try {
             const db = admin.firestore();
-            // Prepare the conversation history
             const modelMessages = [];
 
             // Append the new user message (ensure it's non-empty)
@@ -318,7 +314,6 @@ router.post(
 
             if (modelName.startsWith('openai:')) {
                 const model = getModelInstance(modelName);
-                // OpenAI model interaction
                 const response = await model.invoke(modelMessages);
                 const jsonRes = response.toJSON();
 
@@ -330,7 +325,6 @@ router.post(
 
             } else if (modelName.startsWith('gemini:')) {
                 const geminiModel = getModelInstance(modelName);
-                console.log(modelMessages)
                 const response = await geminiModel.invoke(modelMessages);
                 const jsonResGemini = response.toJSON();
 
@@ -341,27 +335,26 @@ router.post(
                 console.log('Content:', responseText);
 
             } else if (modelName.startsWith('imagegen:')) {
-                // console.log(modelName);
-                let modelId = modelName.split(":")[1];
-                // console.log(modelId);
-
-                // Call the generateImage function
+                const modelId = modelName.split(":")[1];
                 const response = await generateImage(message, modelId);
-                // console.log(response);
 
-                // responseText = "######REQUEST_ID:" + response.id;
                 responseText = response.id;
 
-                // Increment user's image generation count
                 const userRef = db.collection('users').doc(req.user.uid);
                 await userRef.update({
-                    imageGenerationCount: admin.firestore.FieldValue.increment(1),  // Increment image count
+                    imageGenerationCount: admin.firestore.FieldValue.increment(1),
                 });
 
+            } else if (modelName.startsWith("dalle:")) {
+                const modelId = modelName.split(":")[1];
+                const response = await generateDalleImg(message, modelId);
+                const imageUrl = response[0].url;
+
+                // Send the response and return to prevent further code execution
+                return res.send({ response: imageUrl });
             } else {
                 throw new Error('Model not supported.');
             }
-
 
             // Update token count
             const userRef = db.collection('users').doc(req.user.uid);
@@ -369,12 +362,14 @@ router.post(
                 tokenCount: admin.firestore.FieldValue.increment(tokensUsed),
             });
 
+            // Send response after all processing is done
             res.json({ response: responseText });
         } catch (err) {
             res.status(500).json({ error: 'Failed to process message.', details: err.message });
         }
     }
 );
+
 
 router.post(
     '/image/:chatId',
