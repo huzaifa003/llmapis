@@ -309,7 +309,7 @@ router.post(
                 throw new Error('No valid content to process.');
             }
 
-            let responseText;
+            let responseText = "";
             let tokensUsed = 0;
 
             if (modelName.startsWith('openai:')) {
@@ -330,6 +330,28 @@ router.post(
 
                 tokensUsed = jsonResGemini.kwargs.usage_metadata.total_tokens;
                 responseText = jsonResGemini.kwargs.content;
+
+                console.log('Total Tokens:', tokensUsed);
+                console.log('Content:', responseText);
+
+            } else if (modelName.startsWith("llama:") || modelName.startsWith("mixtral")) {
+                const model = getModelInstance(modelName);
+                const response = await model.invoke(modelMessages);
+                const jsonRes = response.toJSON();
+
+                tokensUsed = jsonRes.kwargs.usage_metadata.total_tokens;
+                responseText = jsonRes.kwargs.content;
+
+                console.log('Total Tokens:', tokensUsed);
+                console.log('Content:', responseText);
+
+            } else if (modelName.startsWith("anthropic:")) {
+                const model = getModelInstance(modelName);
+                const response = await model.invoke(modelMessages);
+                const jsonRes = response.toJSON();
+
+                tokensUsed = jsonRes.kwargs.usage_metadata.total_tokens;
+                responseText = jsonRes.kwargs.content;
 
                 console.log('Total Tokens:', tokensUsed);
                 console.log('Content:', responseText);
@@ -369,6 +391,7 @@ router.post(
         }
     }
 );
+
 
 
 router.post(
