@@ -1319,8 +1319,7 @@ router.get("/:botId/chat/:chatId/widget", async (req, res) => {
     const botId = '${botId}';
     const chatId = '${chatId}';
     const modelName = '${modelName}';
-    let botAvatarUrl = 'https://storage.googleapis.com/llms-d6b5b.appspot.com/${botId}/avatar/avatar.png';
-    
+    let botAvatarUrl = 'https://storage.googleapis.com/${process.env.FIREBASE_STORAGE_BUCKET}/${botId}/avatar/avatar.png';
     let conversationHistory = [];
     let streamingBubble = null;
 
