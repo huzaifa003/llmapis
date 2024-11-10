@@ -17,9 +17,7 @@ const serviceAccount = JSON.parse(fs.readFileSync('./llms_private.json', 'utf8')
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    storageBucket: "model-leap.firebasestorage.app"
-
-  
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET
 });
 
 // Use CORS middleware
