@@ -24,7 +24,7 @@ router.post('/register', async (req, res) => {
 
     // Set initial custom claims
     await admin.auth().setCustomUserClaims(userRecord.uid, {
-      subscriptionTier: subscriptionTier || 'Free',
+      subscriptionTier: subscriptionTier || 'free',
     });
 
     // Initialize user data in Firestore
