@@ -31,7 +31,7 @@ router.post('/register', async (req, res) => {
     const db = admin.firestore();
     await db.collection('users').doc(userRecord.uid).set({
       tokenCount: 0,
-      subscriptionTier: subscriptionTier || 'Free',
+      subscriptionTier: subscriptionTier || 'free',
     });
 
 
