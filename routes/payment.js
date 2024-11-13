@@ -92,8 +92,8 @@ router.post('/create-checkout-session', async (req, res) => {
             subscription_data: {
                 metadata: { userId: userId },
             },
-            success_url: `${req.headers.origin || 'http://localhost:3000'}/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${req.headers.origin || 'http://localhost:3000'}/cancel`,
+            success_url: `${req.headers.origin || 'http://localhost:3000'}/app/billing`,
+            cancel_url: `${req.headers.origin || 'http://localhost:3000'}/app/billing`,
         });
 
         res.json({ id: session.url });
