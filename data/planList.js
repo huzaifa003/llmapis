@@ -27,7 +27,7 @@ export const planList = {
       "features": [
         "10 Million AI/ML Tokens or 1K Images",
         "Access to Pro models in the AI playground",
-        "Serverless access to over 100 AI Models"
+        "Access to advanced models , detailed analytics and API with upto 100k API calls"
       ]
     },
     {
@@ -37,7 +37,7 @@ export const planList = {
       "features": [
         "120 Million AI/ML Tokens or 12K Images",
         "Access to Pro models in the AI playground",
-        "Serverless access to over 100 AI Models"
+          "Full Access to all models , unlimited api calls , custom integrations and priority support"
       ]
     },
   //   {
