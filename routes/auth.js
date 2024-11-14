@@ -58,7 +58,7 @@ router.post('/register', async (req, res) => {
 // Google Sign-In Endpoint
 // Unified Google Sign-In/Sign-Up Endpoint
 router.post('/google-auth', async (req, res) => {
-  const { googleIdToken, subscriptionTier = 'Free' } = req.body;
+  const { googleIdToken, subscriptionTier = 'free' } = req.body;
 
   try {
     // Verify Google ID token and get user information from Firebase
