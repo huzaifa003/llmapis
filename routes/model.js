@@ -24,7 +24,7 @@ router.get('/get-models', authMiddleware, async (req, res) => {
     }
 
     // Retrieve user subscription tier
-    let subscriptionTier = req.user.subscriptionTier || 'Free';
+    let subscriptionTier = req.user.subscriptionTier || 'free';
     subscriptionTier = subscriptionTier.toLowerCase();
 
     // Filter models based on model_type
@@ -40,16 +40,25 @@ router.get('/get-models', authMiddleware, async (req, res) => {
         .json({ error: 'Invalid model type.', details: 'model_type' });
     }
 
-
-    // If the user is on a Free plan, filter out pro models
-    // if (subscriptionTier == 'free') {
-    //   filteredModels = filteredModels.map(category => {
-    //     return {
-    //       ...category,
-    //       options: category.options.filter(option => !option.isPro)
-    //     };
-    //   });
-    // }
+    // Add `isLocked` attribute based on subscription tier
+    filteredModels = filteredModels.map(category => {
+      return {
+        ...category,
+        options: category.options.map(option => {
+          if (subscriptionTier === 'free') {
+            return {
+              ...option,
+              isLocked: option.isPro, // Locked if it's a pro model
+            };
+          } else {
+            return {
+              ...option,
+              isLocked: false, // No models locked for premium users
+            };
+          }
+        }),
+      };
+    });
 
     return res.status(200).json(filteredModels);
 
