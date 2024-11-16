@@ -48,12 +48,12 @@ router.get('/get-models', authMiddleware, async (req, res) => {
           if (subscriptionTier === 'free') {
             return {
               ...option,
-              isLocked: option.isPro, // Locked if it's a pro model
+              isLocked: option.isPro, 
             };
           } else {
             return {
               ...option,
-              isLocked: false, // No models locked for premium users
+              isLocked: false, 
             };
           }
         }),

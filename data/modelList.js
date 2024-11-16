@@ -74,13 +74,13 @@ const modelsData = [
     options: [
       {
         value: "llama:llama3-groq-70b-8192-tool-use-preview",
-        label: "Llama 3 Groq 70B Tool Use (Preview)",
+        label: "Llama 3 70B (Preview)",
         isPro: true,
         description: "A specialized version of Llama designed for tool integration and massive token contexts",
       },
       {
         value: "llama:llama3-groq-8b-8192-tool-use-preview",
-        label: "Llama 3 Groq 8B Tool Use (Preview)",
+        label: "Llama 3-8B (Preview)",
         isPro: true,
         description: "A smaller variant of Llama 3 optimized for general-purpose tasks and tool use",
       },
