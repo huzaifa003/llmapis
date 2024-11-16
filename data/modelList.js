@@ -159,6 +159,12 @@ const imageModelsData = [
         description: "Mid Journey images",
       },
       {
+        value: "imagegen:ae-realistic-v5",
+        label: "SD 1.5",
+        isPro: true,
+        description: "Realistic",
+      },
+      {
         value: "imagegen:sdxl",
         label: "SDXL",
         isPro: false,
