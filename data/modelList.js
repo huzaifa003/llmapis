@@ -161,7 +161,7 @@ const imageModelsData = [
       {
         value: "imagegen:ae-realistic-v5",
         label: "SD 1.5",
-        isPro: true,
+        isPro: false,
         description: "Realistic",
       },
       {
