@@ -42,14 +42,14 @@ router.get('/get-models', authMiddleware, async (req, res) => {
 
 
     // If the user is on a Free plan, filter out pro models
-    if (subscriptionTier == 'free') {
-      filteredModels = filteredModels.map(category => {
-        return {
-          ...category,
-          options: category.options.filter(option => !option.isPro)
-        };
-      });
-    }
+    // if (subscriptionTier == 'free') {
+    //   filteredModels = filteredModels.map(category => {
+    //     return {
+    //       ...category,
+    //       options: category.options.filter(option => !option.isPro)
+    //     };
+    //   });
+    // }
 
     return res.status(200).json(filteredModels);
 

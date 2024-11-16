@@ -41,7 +41,7 @@ const modelsData = [
       {
         value: "openai:o1-mini",
         label: "O1 Mini",
-        isPro: false,
+        isPro: true,
         description: "Language model trained with reinforcement learning for simpler tasks",
       },
     ],
