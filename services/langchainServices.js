@@ -11,8 +11,15 @@ export const getModelInstance = (modelName, kwargs) => {
     // console.log(typeof(String(process.env.OPENAI_API_KEY)))
     let finalName = modelName.replace('openai:', '');
     kwargs = kwargs || {}; // Ensure kwargs is initialized to an empty object if it's undefined
-    kwargs['maxTokens'] = kwargs['maxOutputTokens'] || 2048;  // Default to 2048 if maxOutputTokens isn't provided
-    kwargs['max_tokens'] = kwargs['maxOutputTokens'] || 2048;
+    
+    if (modelName.includes('o1')){
+      kwargs['max_completion_tokens'] = kwargs['maxOutputTokens'] || 2048;
+    }
+    else{
+      kwargs['maxTokens'] = kwargs['maxOutputTokens'] || 2048;  // Default to 2048 if maxOutputTokens isn't provided
+      kwargs['max_tokens'] = kwargs['maxOutputTokens'] || 2048;
+    }
+    
 
     return new ChatOpenAI({
       modelName: finalName,
