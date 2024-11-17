@@ -32,9 +32,12 @@ const authMiddleware = async (req, res, next) => {
   try {
     // Verify the ID token using Firebase Admin SDK
     const decodedToken = await admin.auth().verifyIdToken(idToken, true); // 'true' ensures check for token revocation
-    
+    console.log("Decoded UID:", decodedToken.uid);
+
     // Fetch the latest user data from Firestore
     const db = admin.firestore();
+
+
     const userDoc = await db.collection('users').doc(decodedToken.uid).get();
 
     if (!userDoc.exists) {

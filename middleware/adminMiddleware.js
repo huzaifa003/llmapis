@@ -19,7 +19,7 @@ const adminMiddleware = async (req, res, next) => {
     if (userRole !== 'admin') {
       return res.status(403).json({ error: 'Access denied. Admins only.' });
     }
-
+   
     next(); // User is an admin, proceed to the next middleware/route handler
   } catch (error) {
     res.status(500).json({ error: 'Failed to verify admin status', details: error.message });

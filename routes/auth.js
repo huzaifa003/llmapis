@@ -293,14 +293,13 @@ router.get('/get-users', authMiddleware, async (req, res) => {
     const db = admin.firestore();
     const auth = admin.auth();
     const usersRef = db.collection('users');
-
+    console.log(usersRef);
     const querySnapshot = await usersRef.get();
+   
+    
     const users = await Promise.all(
       querySnapshot.docs.map(async (doc) => {
         const userData = doc.data();
-
-        
-        
         try {
           const userRecord = await auth.getUser(doc.id);
           return {
