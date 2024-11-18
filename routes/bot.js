@@ -1322,7 +1322,9 @@ router.get("/:botId/chat/:chatId/widget", async (req, res) => {
     let botAvatarUrl = 'https://storage.googleapis.com/${process.env.FIREBASE_STORAGE_BUCKET}/${botId}/avatar/avatar.png';
     let conversationHistory = [];
     let streamingBubble = null;
-
+let avatar; // Declare avatar at the function scope
+  let messageWrapper;
+  let messageBubble;
     const apiUrl = modelName.startsWith('imagegen:') || modelName.startsWith('dalle:')
       ? '${process.env.BACKEND_URL}/api/bot/' + botId + '/chat/' + chatId + '/image'
       : '${process.env.BACKEND_URL}/api/bot/' + botId + '/chat/' + chatId + '/stream';
@@ -1343,9 +1345,7 @@ router.get("/:botId/chat/:chatId/widget", async (req, res) => {
 
     let accumulatedContent = '';
   function appendMessage(content, className, avatarUrl, isStreaming = false, isImage = false) {
-  let avatar; // Declare avatar at the function scope
-  let messageWrapper;
-  let messageBubble;
+  
 
   if (isStreaming && streamingBubble) {
     accumulatedContent += String(content);
@@ -1387,8 +1387,7 @@ router.get("/:botId/chat/:chatId/widget", async (req, res) => {
     chatBox.scrollTop = chatBox.scrollHeight;
   }
 }
-
-   async function pollForImage(imageId) {
+async function pollForImage(imageId) {
   const imageApiUrl = '${process.env.BACKEND_URL}/api/bot/get_images';
   let imageGenerated = false;
   let retries = 0;
@@ -1399,39 +1398,47 @@ router.get("/:botId/chat/:chatId/widget", async (req, res) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey
+        'x-api-key': apiKey,
       },
-      body: JSON.stringify({ request_id: imageId })
+      body: JSON.stringify({ request_id: imageId }),
     });
 
     if (response.ok) {
       const imageData = await response.json();
-      const imageWrapper = chatBox.querySelector('.loading-spinner').parentNode;
+      const imageWrapper = chatBox.querySelector('.loading-spinner').closest('.message-wrapper');
       
       if (imageData.status === 'success') {
         const imageUrl = imageData.output[0];
-        imageWrapper.parentNode.removeChild(imageWrapper);
-        appendMessage(imageUrl, 'bot', 'botAvatarUrl', false, true);
+        
+        // Remove the loading wrapper
+        if (imageWrapper) {
+          imageWrapper.remove();
+        }
+        
+        appendMessage(imageUrl, 'bot', botAvatarUrl, false, true);
         imageGenerated = true;
       } else if (imageData.status === 'error') {
-        imageWrapper.parentNode.removeChild(imageWrapper);
-        appendMessage('Error generating image.', 'bot', 'botAvatarUrl');
+        if (imageWrapper) {
+          imageWrapper.remove();
+        }
+        appendMessage('Error generating image.', 'bot', botAvatarUrl);
         imageGenerated = true;
       }
     }
 
-    retries++; // Increment the retry counter
+    retries++;
     if (!imageGenerated && retries < maxRetries) {
-      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds before retrying
+      await new Promise((resolve) => setTimeout(resolve, 5000));
     } else if (retries >= maxRetries) {
-      const imageWrapper = chatBox.querySelector('.loading-spinner').parentNode;
-      imageWrapper.parentNode.removeChild(imageWrapper);
-      appendMessage('Max retries reached. Image generation failed.', 'bot', 'bot-avatar.png');
+      const imageWrapper = chatBox.querySelector('.loading-spinner').closest('.message-wrapper');
+      if (imageWrapper) {
+        imageWrapper.remove();
+      }
+      appendMessage('Max retries reached. Image generation failed.', 'bot', botAvatarUrl);
       break;
     }
   }
 }
-
 
 
 async function fetchImage(imageId) {
@@ -1449,13 +1456,14 @@ async function fetchImage(imageId) {
 
     if (response.ok) {
       const imageData = await response.json();
-      const imageWrapper = chatBox.querySelector('.loading-spinner').parentNode;
+        const imageWrapper = chatBox.querySelector('.loading-spinner').closest('.message-wrapper');
         const imageUrl = imageData.response; // Assuming response is now directly a URL
-        imageWrapper.parentNode.removeChild(imageWrapper);
+       imageWrapper.remove();
+   
         appendMessage(imageUrl, 'bot', botAvatarUrl, false, true); // Image displayed
     } 
       else {
-        imageWrapper.parentNode.removeChild(imageWrapper);
+        imageWrapper.remove();
         appendMessage('Error generating image.', 'bot', botAvatarUrl); // Handle error
       }
   } catch (error) {
@@ -1514,8 +1522,8 @@ const loadingSpinnerHtml = '<div class="loading-spinner"></div>';
             } else if (modelName.startsWith('dalle:')) {
              
               const imageUrl = data.response;
-           const imageWrapper = chatBox.querySelector('.loading-spinner').parentNode;
-            imageWrapper.parentNode.removeChild(imageWrapper);
+           const imageWrapper = chatBox.querySelector('.loading-spinner').closest('.message-wrapper');
+            imageWrapper.remove()
               appendMessage(imageUrl, 'bot', botAvatarUrl, false, true);
 
             }
