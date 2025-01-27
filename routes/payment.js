@@ -90,7 +90,7 @@ router.post('/create-checkout-session', async (req, res) => {
             ],
             mode: 'subscription',
             subscription_data: {
-                metadata: { userId: userId, planType: planType },
+                metadata: { userId: userId },
             },
             success_url: `${req.headers.origin || 'http://localhost:3000'}/app/billing`,
             cancel_url: `${req.headers.origin || 'http://localhost:3000'}/app/billing`,
@@ -159,85 +159,81 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
   // Log received event
   console.log(`Received event: ${event.type}`);
-
-  // Handle the event
-  switch (event.type) {
-    case 'customer.subscription.created':
-    case 'customer.subscription.updated':
-      {
-        const subscription = event.data.object;
-        const userId = subscription.metadata.userId;
-        const planType = subscription.metadata.planType;
-        const subscriptionId = subscription.id;
-
-        if (!userId) {
-          throw new Error('userId is missing in the metadata');
+  try {
+    switch (event.type) {
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated':
+        {
+          const subscription = event.data.object;
+          const userId = subscription.metadata.userId;
+          const subscriptionId = subscription.id;
+  
+          if (!userId) {
+            throw new Error('userId is missing in the metadata');
+          }
+  
+          const plan = subscription.items.data[0].price.id;
+          const subscriptionStatus = subscription.status;
+          const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+          const cancelAt = subscription.cancel_at;
+  
+          await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId, cancelAtPeriodEnd, cancelAt);
+          console.log(`User ${userId} subscription updated to plan: ${plan}`);
         }
-
-        const plan = subscription.items.data[0].price.id;
-        const subscriptionStatus = subscription.status;
-        const cancelAtPeriodEnd = subscription.cancel_at_period_end;
-        const cancelAt = subscription.cancel_at;
-
-        await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId, cancelAtPeriodEnd, cancelAt);
-        const db = admin.firestore();
-        const userRef = db.collection('users').doc(userId);
-
-        await userRef.update({ subscriptionTier : planType });
-
-    // // Update custom claims (optional, if you need to check claims in security rules)
-    //     await admin.auth().setCustomUserClaims(userId, {
-    //     subscriptionTier: planType,
-    //   });
-        console.log(`User ${userId} subscription updated to plan: ${plan}`);
-      }
-      break;
-
-    case 'invoice.payment_succeeded':
-      {
-        const invoice = event.data.object;
-        const subscriptionId = invoice.subscription;
-    
-        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-        const userId = subscription.metadata.userId;
-    
-        if (!userId) {
-          throw new Error('userId is missing in the metadata');
-        }
-    
-        const plan = subscription.items.data[0].price.id;
-        const subscriptionStatus = subscription.status;
-    
-        await resetUserUsage(userId); // Reset usage counts
-    
-        await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId);
-        console.log(`User ${userId} subscription renewed. Usage reset.`);
-      }
-      break;
+        break;
+  
+      case 'invoice.payment_succeeded':
+        {
+          const invoice = event.data.object;
+          const subscriptionId = invoice.subscription;
       
-
-    case 'customer.subscription.deleted':
-      {
-        const subscription = event.data.object;
-        const userId = subscription.metadata.userId;
-        const subscriptionId = subscription.id;
-
-        if (!userId) {
-          throw new Error('userId is missing in the metadata');
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          const userId = subscription.metadata.userId;
+      
+          if (!userId) {
+            throw new Error('userId is missing in the metadata');
+          }
+      
+          const plan = subscription.items.data[0].price.id;
+          const subscriptionStatus = subscription.status;
+      
+          await resetUserUsage(userId); // Reset usage counts
+      
+          await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId);
+          console.log(`User ${userId} subscription renewed. Usage reset.`);
         }
-
-        await updateUserSubscription(userId, null, 'canceled', '', false, null);
-        console.log(`User ${userId}'s subscription canceled`);
-      }
-      break;
-
-    // Handle other events as needed
-
-    default:
-      console.log(`Unhandled event type: ${event.type}`);
+        break;
+        
+  
+      case 'customer.subscription.deleted':
+        {
+          const subscription = event.data.object;
+          const userId = subscription.metadata.userId;
+          const subscriptionId = subscription.id;
+  
+          if (!userId) {
+            throw new Error('userId is missing in the metadata');
+          }
+  
+          await updateUserSubscription(userId, null, 'canceled', '', false, null);
+          console.log(`User ${userId}'s subscription canceled`);
+        }
+        break;
+  
+      // Handle other events as needed
+  
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+  
+    res.json({ received: true });
   }
-
-  res.json({ received: true });
+  catch (error) {
+    console.error('Error handling Stripe event:', error);
+    res.status(400).send(`Error handling Stripe event: ${error.message}`);
+  }
+  // Handle the event
+  
 });
 
 
