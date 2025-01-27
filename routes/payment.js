@@ -90,7 +90,7 @@ router.post('/create-checkout-session', async (req, res) => {
             ],
             mode: 'subscription',
             subscription_data: {
-                metadata: { userId: userId },
+                metadata: { userId: userId, planType: planType },
             },
             success_url: `${req.headers.origin || 'http://localhost:3000'}/app/billing`,
             cancel_url: `${req.headers.origin || 'http://localhost:3000'}/app/billing`,
@@ -167,6 +167,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       {
         const subscription = event.data.object;
         const userId = subscription.metadata.userId;
+        const planType = subscription.metadata.planType;
         const subscriptionId = subscription.id;
 
         if (!userId) {
@@ -179,6 +180,14 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         const cancelAt = subscription.cancel_at;
 
         await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId, cancelAtPeriodEnd, cancelAt);
+        const userRef = db.collection('users').doc(userId);
+
+        await userRef.update({ subscriptionTier : planType });
+
+    // // Update custom claims (optional, if you need to check claims in security rules)
+    //     await admin.auth().setCustomUserClaims(userId, {
+    //     subscriptionTier: planType,
+    //   });
         console.log(`User ${userId} subscription updated to plan: ${plan}`);
       }
       break;
