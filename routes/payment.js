@@ -180,6 +180,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         const cancelAt = subscription.cancel_at;
 
         await updateUserSubscription(userId, plan, subscriptionStatus, subscriptionId, cancelAtPeriodEnd, cancelAt);
+        const db = admin.firestore();
         const userRef = db.collection('users').doc(userId);
 
         await userRef.update({ subscriptionTier : planType });
